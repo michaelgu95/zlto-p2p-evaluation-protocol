@@ -45,7 +45,7 @@ const ipfs = new IPFS(ipfsOptions);
 ipfs.on('ready', async () => {
   let orbitdb = new OrbitDB(ipfs);
   try {
-    db = await orbitdb.kvstore('profile');
+    db = await orbitdb.kvstore('zlto');
   } catch (e) {
     console.log(e);
   }
