@@ -6,6 +6,7 @@ const webpack = require('webpack');
 const webpackMiddleware = require('webpack-dev-middleware');
 const webpackHotMiddleware = require('webpack-hot-middleware');
 const config = require('./webpack.config.js');
+const _ = require('lodash');
 
 const isDeveloping = process.env.NODE_ENV !== 'production';
 const port = isDeveloping ? 3000 : process.env.PORT;
@@ -102,18 +103,25 @@ app.post('/newEvaluation', async function(req, res) {
   const requesterID = req.body.reqid;
   if(db) {
     try {
-      let storedRequest = await db.get(requesterID);
+      const storedRequest = await db.get(requesterID);
 
       if (storedRequest) {
-        console.log('found request matching specified id: ', storedRequest);
-        const newEvaluation = {
-          //TODO: add timestamp
-          evaluator: req.body.evaluator,
-          judgment: req.body.judgment
-        };
-        let storedEvals = storedRequest.evaluations;
-        storedEvals.push(newEvaluation);
-        storedRequest.evaluations = storedEvals;
+        const storedEvals = storedRequest.evaluations;
+        const evaluatorExists = _.find(storedEvals, eval => eval.evaluator.id === req.body.evaluator.id);
+
+        if(!_.isUndefined(evaluatorExists)) { // this evaluator has already evaluated
+          evaluatorExists.judgment = req.body.judgment;
+        } else {
+          const newEvaluation = {
+            //TODO: add timestamp
+            evaluator: req.body.evaluator,
+            judgment: req.body.judgment
+          };
+
+          storedEvals.push(newEvaluation);
+          storedRequest.evaluations = storedEvals;
+          // console.log('storedRequest new item: ', storedRequest);
+        }
 
         try {
           await db.put(requesterID, storedRequest);
