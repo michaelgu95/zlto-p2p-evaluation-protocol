@@ -18,7 +18,6 @@ app.use(bodyParser.json());
 const NUM_EVALUATORS_REQUIRED = 3;
 
 function processEvaluations(evaluations) {
-  console.log('evaluations: ', evaluations);
   //TODO: initiateReputationFlow, createWorkAsset, submitAssetToCentral, submiteAssetToChain
   _.forEach(evaluations, eval => {
     console.log(`Reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationBefore}`);
@@ -127,10 +126,8 @@ app.post('/newEvaluation', async function(req, res) {
             evaluator: req.body.evaluator,
             judgment: req.body.judgment
           };
-
           storedEvals.push(newEvaluation);
           storedRequest.evaluations = storedEvals;
-          // console.log('storedRequest new item: ', storedRequest);
         }
 
         try {
@@ -139,11 +136,9 @@ app.post('/newEvaluation', async function(req, res) {
           // Enough evaluations have come through
           if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
             processEvaluations(storedRequest.evaluations);
-            console.log();
             res.send('Evaluation fulfilled, cleared in orbitDB, ready for on-chain sync');
           } else {
             res.send(storedRequest);
-
           }
         } catch(e) {
           res.send('error in storing request with updated evaluator: ', e);
