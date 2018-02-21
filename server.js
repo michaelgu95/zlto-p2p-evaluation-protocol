@@ -131,7 +131,6 @@ app.post('/newEvaluation', async function(req, res) {
 
         try {
           await db.put(requesterID, storedRequest);
-
           // Enough evaluations have come through
           if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
             processEvaluations(storedRequest.evaluations);
@@ -155,7 +154,7 @@ app.post('/newEvaluation', async function(req, res) {
 
 app.listen(port, '0.0.0.0', function onStart(err) {
   if (err) {
-    console.log(err);
+    console.log('error on app.listen: ', err);
   }
   console.info('==> 🌎 Listening on port %s. Open up http://0.0.0.0:%s/ in your browser.', port, port);
 });
