@@ -21,15 +21,15 @@ const asyncMiddleware = fn =>
       .catch(next);
   };
 
+// configure IPFS/Orbit
+let db;
+const IPFS = require('ipfs');
+const OrbitDB = require('orbit-db');
 const ipfsOptions = {
   EXPERIMENTAL: {
     pubsub: true
   },
 }
-
-let db;
-const IPFS = require('ipfs');
-const OrbitDB = require('orbit-db');
 const ipfs = new IPFS(ipfsOptions);
 
 ipfs.on('ready', async () => {
@@ -40,7 +40,6 @@ ipfs.on('ready', async () => {
     console.log(e);
   }
 });
-
 
 if (isDeveloping) {
   const compiler = webpack(config);
@@ -71,9 +70,10 @@ if (isDeveloping) {
 }
 
 app.post('/newRequest', async function(req, res) {
-  newReqObj = {
+  let newReqObj = {
     requesterID: req.body.id,
-    metadata: req.body.metadata
+    metadata: req.body.metadata,
+    evaluations: []
   };
   console.log('newReqObj: ', newReqObj);
 
@@ -88,7 +88,47 @@ app.post('/newRequest', async function(req, res) {
 app.get('/checkRequest', async function(req, res) {
   if(db) {
     let storedRequest = await db.get(req.param('id'));
-    res.send(storedRequest);
+    if(storedRequest) {
+      res.send(storedRequest);
+    } else {
+      res.send('no request matching specified id');
+    }
+  } else {
+    res.send('no db instance');
+  }
+});
+
+app.post('/newEvaluation', async function(req, res) {
+  const requesterID = req.body.reqid;
+  if(db) {
+    try {
+      let storedRequest = await db.get(requesterID);
+
+      if (storedRequest) {
+        console.log('found request matching specified id: ', storedRequest);
+        const newEvaluation = {
+          //TODO: add timestamp
+          evaluator: req.body.evaluator,
+          judgment: req.body.judgment
+        };
+        let storedEvals = storedRequest.evaluations;
+        storedEvals.push(newEvaluation);
+        storedRequest.evaluations = storedEvals;
+
+        try {
+          await db.put(requesterID, storedRequest);
+          res.send(storedRequest);
+        } catch(e) {
+          res.send('error in storing request with updated evaluator: ', e);
+        }
+      } else {
+        res.send('no request matching specified id');
+      }
+    } catch(e) {
+      res.send('error in obtaining request with specified id: ', e);
+    }
+  } else {
+    res.send('no db instance');
   }
 });
 
