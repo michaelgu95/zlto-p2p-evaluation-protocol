@@ -115,7 +115,6 @@ app.post('/newEvaluation', async function(req, res) {
 
       if (storedRequest) {
         const storedEvals = storedRequest.evaluations;
-        console.log('type of storedEvals: ', typeof(storedEvals));
         const evaluatorExists = _.find(storedEvals, eval => eval.evaluator.id === req.body.evaluator.id);
 
         if(!_.isUndefined(evaluatorExists)) { // this evaluator has already evaluated
