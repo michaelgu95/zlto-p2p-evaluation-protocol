@@ -15,6 +15,15 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded());
 app.use(bodyParser.json());
 
+const NUM_EVALUATORS_REQUIRED = 3;
+
+function processEvaluations(evaluations) {
+  console.log('evaluations: ', evaluations);
+  //TODO: initiateReputationFlow, createWorkAsset, submitAssetToCentral, submiteAssetToChain
+  _.forEach(evaluations, eval => {
+    console.log(`Reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationBefore}`);
+  });
+}
 
 const asyncMiddleware = fn =>
   (req, res, next) => {
@@ -22,7 +31,7 @@ const asyncMiddleware = fn =>
       .catch(next);
   };
 
-// configure IPFS/Orbit
+// ========== configure IPFS/Orbit ========== //
 let db;
 const IPFS = require('ipfs');
 const OrbitDB = require('orbit-db');
@@ -107,6 +116,7 @@ app.post('/newEvaluation', async function(req, res) {
 
       if (storedRequest) {
         const storedEvals = storedRequest.evaluations;
+        console.log('type of storedEvals: ', typeof(storedEvals));
         const evaluatorExists = _.find(storedEvals, eval => eval.evaluator.id === req.body.evaluator.id);
 
         if(!_.isUndefined(evaluatorExists)) { // this evaluator has already evaluated
@@ -125,7 +135,16 @@ app.post('/newEvaluation', async function(req, res) {
 
         try {
           await db.put(requesterID, storedRequest);
-          res.send(storedRequest);
+
+          // Enough evaluations have come through
+          if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
+            processEvaluations(storedRequest.evaluations);
+            console.log();
+            res.send('Evaluation fulfilled, cleared in orbitDB, ready for on-chain sync');
+          } else {
+            res.send(storedRequest);
+
+          }
         } catch(e) {
           res.send('error in storing request with updated evaluator: ', e);
         }
