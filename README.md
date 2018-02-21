@@ -1,12 +1,7 @@
-# webpack-express-boilerplate
-A boilerplate for running a Webpack workflow in Node express
+# p2pEvalNode
+A node server for p2p evaluation of work. Primarily for performance comparisons against decentralized smart contract.
 
-Please read the following article: [The ultimate Webpack setup](http://www.christianalfoni.com/articles/2015_04_19_The-ultimate-webpack-setup) to know more about this boilerplate.
-
-## Major update to project
-Inspired by [this project](https://github.com/vesparny/react-kickstart) and the evolving of [react-transform](https://github.com/gaearon/react-transform-boilerplate) and [CSS Modules]((http://glenmaddern.com/articles/css-modules)), this project has gotten a major upgrade.
-
-**NOTE!** Use the latest version of Node, 4.x.x.
+**NOTE!** Use the latest version of Node, 9.x.x.
 
 ## Install and Running
 `git clone https://github.com/christianalfoni/webpack-express-boilerplate.git`

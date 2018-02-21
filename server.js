@@ -15,13 +15,11 @@ app.use(bodyParser.urlencoded());
 app.use(bodyParser.json());
 
 
-
 const asyncMiddleware = fn =>
   (req, res, next) => {
     Promise.resolve(fn(req, res, next))
       .catch(next);
   };
-
 
 const ipfsOptions = {
   EXPERIMENTAL: {
