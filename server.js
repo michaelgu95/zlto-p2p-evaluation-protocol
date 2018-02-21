@@ -18,7 +18,7 @@ app.use(bodyParser.json());
 const NUM_EVALUATORS_REQUIRED = 3;
 
 function processEvaluations(evaluations) {
-  //TODO: initiateReputationFlow, createWorkAsset, submitAssetToCentral, submiteAssetToChain
+  //TODO: initiateReputationFlow, createWorkAsset, submitAssetToCentral, submitAssetToChain
   _.forEach(evaluations, eval => {
     console.log(`Reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationBefore}`);
   });
@@ -46,7 +46,7 @@ ipfs.on('ready', async () => {
   try {
     db = await orbitdb.kvstore('zlto');
   } catch (e) {
-    console.log(e);
+    console.log('error in creating orbit db: ', e);
   }
 });
 
