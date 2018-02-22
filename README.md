@@ -28,6 +28,3 @@ To turn off CSS Modules remove it from the `webpack.config.js` file.
 
 ### Babel and Linting
 Both Node server and frontend code runs with Babel. And all of it is linted. With atom you install the `linter` package, then `linter-eslint` and `linter-jscs`. You are covered. Also run `npm run eslint` or `npm run jscs` to verify all files. I would recommend installing `language-babel` package too for syntax highlighting
-
-### Beautify
-With a beautify package installed in your editor it will also do that
