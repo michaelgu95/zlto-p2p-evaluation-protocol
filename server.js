@@ -15,7 +15,7 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded());
 app.use(bodyParser.json());
 
-const NUM_EVALUATORS_REQUIRED = 3;
+const NUM_EVALUATORS_REQUIRED = 10;
 
 function processEvaluations(evaluations) {
   //TODO: initiateReputationFlow, createWorkAsset, submitAssetToCentral, submitAssetToChain
@@ -116,26 +116,50 @@ app.post('/newEvaluation', async function(req, res) {
       if (storedRequest) {
         const storedEvals = storedRequest.evaluations;
         const evaluatorExists = _.find(storedEvals, eval => eval.evaluator.id === req.body.evaluator.id);
+        const { judgment, evaluator } = req.body
 
         if(!_.isUndefined(evaluatorExists)) { // this evaluator has already evaluated
-          evaluatorExists.judgment = req.body.judgment;
+          evaluatorExists.judgment = judgment;
         } else {
           const newEvaluation = {
             //TODO: add timestamp
-            evaluator: req.body.evaluator,
-            judgment: req.body.judgment
+            evaluator: evaluator,
+            judgment: judgment
           };
+
+
+          // Calculate Cost Function
+          console.log('storedEvals.length: ', storedEvals.length);
+          const reputationCommitted = storedEvals.length > 0 
+            ? storedEvals.map(eval => eval.evaluator.reputationDuring).reduce((a,b) => a + b, 0)
+            : 0;
+
+          console.log('reputationCommitted: ', reputationCommitted);
+          const { minRepRequired } = storedRequest.metadata;
+          const TIME_FACTOR = 1;
+          const STAKE_FACTOR = 0.15;
+
+          newEvaluation.evaluator.stake = (1-reputationCommitted/minRepRequired)*(newEvaluation.evaluator.reputationBefore * STAKE_FACTOR / TIME_FACTOR);
+          newEvaluation.evaluator.reputationDuring = newEvaluation.evaluator.reputationBefore - newEvaluation.evaluator.stake;
+
+
+          // Recalculate reputation of old evaluators
+
+
+          // Store updated evaluators
           storedEvals.push(newEvaluation);
           storedRequest.evaluations = storedEvals;
         }
 
         try {
           await db.put(requesterID, storedRequest);
-          // Enough evaluations have come through
+          // Enough evaluations have come through OR enough reputation has come through
           if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
             processEvaluations(storedRequest.evaluations);
             res.send('Evaluation fulfilled, cleared in orbitDB, ready for on-chain sync');
           } else {
+
+            // TODO: Django server will deduct the stake from the evaluator's live reputation
             res.send(storedRequest);
           }
         } catch(e) {
