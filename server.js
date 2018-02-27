@@ -18,9 +18,9 @@ app.use(bodyParser.json());
 const NUM_EVALUATORS_REQUIRED = 10;
 
 function processEvaluations(evaluations) {
-  //TODO: initiateReputationFlow, createWorkAsset, submitAssetToCentral, submitAssetToChain
+  //TODO: createWorkAsset, submitAssetToCentral, submitAssetToChain
   _.forEach(evaluations, eval => {
-    console.log(`Reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationBefore}`);
+    console.log(`Reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
   });
 }
 
@@ -123,38 +123,73 @@ app.post('/newEvaluation', async function(req, res) {
         } else {
           const newEvaluation = {
             //TODO: add timestamp
-            evaluator: evaluator,
-            judgment: judgment
+            evaluator,
+            judgment
           };
 
 
-          // Calculate Cost Function
+          // ============  1) Cost Function: calculate stake for the new evaluator ============
           console.log('storedEvals.length: ', storedEvals.length);
+
+          // Vk
           const reputationCommitted = storedEvals.length > 0 
-            ? storedEvals.map(eval => eval.evaluator.reputationDuring).reduce((a,b) => a + b, 0)
+            ? storedEvals
+              .map(eval => eval.evaluator.reputationDuring)
+              .reduce((a,b) => a + b, 0)
             : 0;
 
           console.log('reputationCommitted: ', reputationCommitted);
+
+          // R
           const { minRepRequired } = storedRequest.metadata;
           const TIME_FACTOR = 1;
-          const STAKE_FACTOR = 0.15;
+          // s
+          const STAKE_FRACTION = 0.15;
 
-          newEvaluation.evaluator.stake = (1-reputationCommitted/minRepRequired)*(newEvaluation.evaluator.reputationBefore * STAKE_FACTOR / TIME_FACTOR);
+          newEvaluation.evaluator.stake = (1-reputationCommitted/minRepRequired)*(newEvaluation.evaluator.reputationBefore * STAKE_FRACTION / TIME_FACTOR);
           newEvaluation.evaluator.reputationDuring = newEvaluation.evaluator.reputationBefore - newEvaluation.evaluator.stake;
+  
+          // Update progress
+          storedRequest.reputationCommitted = newEvaluation.evaluator.reputationDuring;
 
+          // ============ 2) Rep flow: recalculate rep for committed evaluators ============
+          const STAKE_DIST_FRACTION = 0.1;
+          // Wk
+          const reputationInAgreement = storedEvals.length > 0 
+            ? storedEvals
+              .filter(eval => eval.judgment === judgment)
+              .map(eval => eval.evaluator.reputationDuring)
+              .reduce((a,b) => a + b, 0)
+            : 0;
 
-          // Recalculate reputation of old evaluators
+          console.log('reputationInAgreement: ', reputationInAgreement);
 
+          if (storedEvals.length > 0) {
+              storedEvals.forEach(eval => {
+              const agreesWithCurrent = eval.judgment === newEvaluation.judgment;
+              if(agreesWithCurrent) {
+                eval.evaluator.reputationDuring += (STAKE_DIST_FRACTION 
+                                                    * eval.evaluator.reputationDuring 
+                                                    * newEvaluation.evaluator.reputationDuring 
+                                                    / reputationInAgreement);
 
-          // Store updated evaluators
+               
+              }
+             // Update progress
+              storedRequest.reputationCommitted += eval.evaluator.reputationDuring;
+            });
+          }
+
+          // ============ 3) Store updated evals ============ 
           storedEvals.push(newEvaluation);
           storedRequest.evaluations = storedEvals;
         }
 
         try {
           await db.put(requesterID, storedRequest);
-          // Enough evaluations have come through OR enough reputation has come through
-          if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
+          // Enough evaluations have come through OR enough reputation has come through:
+          // if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
+          if(storedRequest.reputationCommitted >= storedRequest.metadata.minRepRequired) {
             processEvaluations(storedRequest.evaluations);
             res.send('Evaluation fulfilled, cleared in orbitDB, ready for on-chain sync');
           } else {
