@@ -15,7 +15,7 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded());
 app.use(bodyParser.json());
 
-const NUM_EVALUATORS_REQUIRED = 10;
+// const NUM_EVALUATORS_REQUIRED = 10;
 
 function processEvaluations(evaluations) {
   //TODO: createWorkAsset, submitAssetToCentral, submitAssetToChain
@@ -141,19 +141,18 @@ app.post('/newEvaluation', async function(req, res) {
           console.log('reputationCommitted: ', reputationCommitted);
 
           // R
-          const { minRepRequired } = storedRequest.metadata;
-          const TIME_FACTOR = 1;
+          const { repToBeGained } = storedRequest.metadata;
           // s
-          const STAKE_FRACTION = 0.15;
+          const STAKE_FRACTION = 0.15; // negative slope of rep flow curve
 
-          newEvaluation.evaluator.stake = (1-reputationCommitted/minRepRequired)*(newEvaluation.evaluator.reputationBefore * STAKE_FRACTION / TIME_FACTOR);
+          newEvaluation.evaluator.stake = (1-reputationCommitted/repToBeGained)*(newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
           newEvaluation.evaluator.reputationDuring = newEvaluation.evaluator.reputationBefore - newEvaluation.evaluator.stake;
   
-          // Update progress
-          storedRequest.reputationCommitted = newEvaluation.evaluator.reputationDuring;
+          // Track progress
+          storedRequest.reputationProduced = newEvaluation.evaluator.reputationDuring - newEvaluation.evaluator.reputationBefore;
 
           // ============ 2) Rep flow: recalculate rep for committed evaluators ============
-          const STAKE_DIST_FRACTION = 0.1;
+          const STAKE_DIST_FRACTION = 0.8; // positive slope of rep flow curve
           // Wk
           const reputationInAgreement = storedEvals.length > 0 
             ? storedEvals
@@ -173,10 +172,9 @@ app.post('/newEvaluation', async function(req, res) {
                                                     * newEvaluation.evaluator.reputationDuring 
                                                     / reputationInAgreement);
 
-               
               }
-             // Update progress
-              storedRequest.reputationCommitted += eval.evaluator.reputationDuring;
+             // Track progress
+              storedRequest.reputationProduced += eval.evaluator.reputationDuring - eval.evaluator.reputationBefore;
             });
           }
 
@@ -189,11 +187,13 @@ app.post('/newEvaluation', async function(req, res) {
           await db.put(requesterID, storedRequest);
           // Enough evaluations have come through OR enough reputation has come through:
           // if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
-          if(storedRequest.reputationCommitted >= storedRequest.metadata.minRepRequired) {
+
+          console.log('reputationProduced: ', storedRequest.reputationProduced);
+
+          if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
             processEvaluations(storedRequest.evaluations);
             res.send('Evaluation fulfilled, cleared in orbitDB, ready for on-chain sync');
           } else {
-
             // TODO: Django server will deduct the stake from the evaluator's live reputation
             res.send(storedRequest);
           }
