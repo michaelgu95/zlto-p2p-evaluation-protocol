@@ -84,8 +84,6 @@ app.post('/newRequest', async function(req, res) {
     metadata: req.body.metadata,
     evaluations: []
   };
-  console.log('newReqObj: ', newReqObj);
-
   if(db) {
     await db.put(req.body.id, newReqObj);
     res.send('successfully stored new request object!');
@@ -112,8 +110,7 @@ app.post('/newEvaluation', async function(req, res) {
   if(db) {
     try {
       const storedRequest = await db.get(requesterID);
-
-      if (storedRequest) {
+      if(storedRequest) {
         const storedEvals = storedRequest.evaluations;
         const evaluatorExists = _.find(storedEvals, eval => eval.evaluator.id === req.body.evaluator.id);
         const { judgment, evaluator } = req.body
@@ -127,10 +124,7 @@ app.post('/newEvaluation', async function(req, res) {
             judgment
           };
 
-
           // ============  1) Cost Function: calculate stake for the new evaluator ============
-          console.log('storedEvals.length: ', storedEvals.length);
-
           // Vk
           const reputationCommitted = storedEvals.length > 0 
             ? storedEvals
@@ -152,7 +146,7 @@ app.post('/newEvaluation', async function(req, res) {
           storedRequest.reputationProduced = newEvaluation.evaluator.reputationDuring - newEvaluation.evaluator.reputationBefore;
 
           // ============ 2) Rep flow: recalculate rep for committed evaluators ============
-          const STAKE_DIST_FRACTION = 0.8; // positive slope of rep flow curve
+          const STAKE_DIST_FRACTION = 0.6; // positive slope of rep flow curve
           // Wk
           const reputationInAgreement = storedEvals.length > 0 
             ? storedEvals
@@ -177,7 +171,6 @@ app.post('/newEvaluation', async function(req, res) {
               storedRequest.reputationProduced += eval.evaluator.reputationDuring - eval.evaluator.reputationBefore;
             });
           }
-
           // ============ 3) Store updated evals ============ 
           storedEvals.push(newEvaluation);
           storedRequest.evaluations = storedEvals;
@@ -187,9 +180,8 @@ app.post('/newEvaluation', async function(req, res) {
           await db.put(requesterID, storedRequest);
           // Enough evaluations have come through OR enough reputation has come through:
           // if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
-
           console.log('reputationProduced: ', storedRequest.reputationProduced);
-
+          
           if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
             processEvaluations(storedRequest.evaluations);
             res.send('Evaluation fulfilled, cleared in orbitDB, ready for on-chain sync');
