@@ -123,7 +123,6 @@ app.post('/newEvaluation', async function(req, res) {
             evaluator,
             judgment
           };
-
           // ============  1) Cost Function: calculate stake for the new evaluator ============
           // Vk
           const reputationCommitted = storedEvals.length > 0 
@@ -133,13 +132,12 @@ app.post('/newEvaluation', async function(req, res) {
             : 0;
 
           console.log('reputationCommitted: ', reputationCommitted);
-
           // R
           const { repToBeGained } = storedRequest.metadata;
           // s
           const STAKE_FRACTION = 0.15; // negative slope of rep flow curve
 
-          newEvaluation.evaluator.stake = (1-reputationCommitted/repToBeGained)*(newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
+          newEvaluation.evaluator.stake = (1-reputationCommitted/repToBeGained) * (newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
           newEvaluation.evaluator.reputationDuring = newEvaluation.evaluator.reputationBefore - newEvaluation.evaluator.stake;
   
           // Track progress
