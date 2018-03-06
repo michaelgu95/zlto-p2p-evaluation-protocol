@@ -11,7 +11,7 @@ module.exports = {
       ref: 'origin/master',
       repo: 'git@github.com:michaelgu95/p2pEvalNode.git',
       path: '/home/ec2-user/zlto_node',
-      'post-deploy': 'yarn install'
+      'post-deploy': 'npm instal && pm2 startOrRestart ecosystem.config.js'
     }
   }
 }
