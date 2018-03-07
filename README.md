@@ -6,17 +6,87 @@ A node server for p2p evaluation of work. Primarily for performance comparisons 
 ## Install and Running
 `git clone https://github.com/christianalfoni/webpack-express-boilerplate.git`
 
-or just export the files:
-
-`svn export https://github.com/christianalfoni/webpack-express-boilerplate/trunk ./dir`
-
-1. cd webpack-express-boilerplate
-2. npm install
-3. npm start
-4. navigate to http://localhost:3000 in your browser of choice.
+1. npm install
+2. npm start
+3. navigate to http://localhost:3000 in your browser of choice.
 
 
-## Overview
+## API
+
+### POST /newRequest
+Example Body:
+```JavaScript
+{
+	"id": 460,
+	"metadata": {
+		"type": "educational",
+		"numHours": 25,
+		"repToBeGained": 500
+	}
+}
+
+```
+Response:
+```JavaScript
+successfully stored new request object!
+```
+
+### GET /checkRequest
+Params:
+- id: the id of the request object 
+Response:
+```JavaScript
+{
+    "requesterID": 460,
+    "metadata": {
+        "type": "educational",
+        "numHours": 25,
+        "repToBeGained": 500
+    },
+    "evaluations": []
+}
+```
+### POST /newEvaluation
+Example Body:
+```JavaScript
+{
+	"reqid": 460,
+	"evaluator": {
+		"name": "gu", 
+		"id": 101, 
+		"reputationBefore": 300
+	},
+	"judgment": false
+}
+
+```
+Response:
+```JavaScript
+{
+    "requesterID": 460,
+    "metadata": {
+        "type": "educational",
+        "numHours": 25,
+        "repToBeGained": 500
+    },
+    "evaluations": [
+        {
+            "evaluator": {
+                "name": "gu",
+                "id": 101,
+                "reputationBefore": 300,
+                "stake": 45,
+                "reputationDuring": 255
+            },
+            "judgment": false
+        }
+    ],
+    "reputationProduced": -45
+}
+```
+
+
+
 
 ### React by default
 The project runs with React by default and hot replacement of changes to the modules. Currently it is on 0.14.3.
