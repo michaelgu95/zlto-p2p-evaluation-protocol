@@ -25,7 +25,7 @@
     "eslint": "eslint .",
     "jscs": "jscs .",
     "restart": "pm2 startOrRestart ecosystem.config.js",
-    "deploy": "pm2 deploy ecosystem.config.js production"
+    "deploy": "sudo pm2 deploy ecosystem.config.js production"
   },
   "dependencies": {
     "babel-cli": "^6.4.0",
