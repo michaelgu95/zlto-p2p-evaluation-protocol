@@ -50,10 +50,7 @@ const asyncMiddleware = fn =>
 //   }
 // });
 const level = require('level');
-var options = {  
-  valueEncoding: 'json'
-};
-var db = level('./mydb', options);
+var db = level('./mydb');
 
 
 if (isDeveloping) {
@@ -116,20 +113,12 @@ app.get('/checkRequest', async function(req, res) {
 
 app.post('/newEvaluation', async function(req, res) {
   const requesterID = req.body.reqid;
-  console.log('requesterID: ', requesterID);
   if(db) {
     try {
       let query = await db.get(requesterID, { asBuffer: false });
       if(query) {
-        console.log('query: ', typeof(query));
-
         storedRequest = JSON.parse(query);
-        console.log('storedRequest: ', storedRequest);
-
-
         const storedEvals = storedRequest.evaluations;
-
-        console.log('storedEvals: ', storedEvals);
         const evaluatorExists = _.find(storedEvals, eval => eval.evaluator.id === req.body.evaluator.id);
         const { judgment, evaluator } = req.body
 
