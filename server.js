@@ -50,7 +50,10 @@ const asyncMiddleware = fn =>
 //   }
 // });
 const level = require('level');
-var db = level('./mydb');
+var options = {  
+  valueEncoding: 'json'
+};
+var db = level('./mydb', options);
 
 
 if (isDeveloping) {
@@ -116,11 +119,11 @@ app.post('/newEvaluation', async function(req, res) {
   console.log('requesterID: ', requesterID);
   if(db) {
     try {
-      let storedRequest = await db.get(requesterID, { asBuffer: false });
-      if(storedRequest) {
-        console.log('storedRequest: ', storedRequest);
+      let query = await db.get(requesterID, { asBuffer: false });
+      if(query) {
+        console.log('query: ', typeof(query));
 
-        storedRequest = JSON.parse(storedRequest);
+        storedRequest = JSON.parse(query);
         console.log('storedRequest: ', storedRequest);
 
 
@@ -190,7 +193,7 @@ app.post('/newEvaluation', async function(req, res) {
         }
 
         try {
-          await db.put(requesterID, storedRequest);
+          await db.put(requesterID, JSON.stringify(storedRequest));
           // Enough evaluations have come through OR enough reputation has come through:
           // if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
           console.log('reputationProduced: ', storedRequest.reputationProduced);
