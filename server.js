@@ -31,24 +31,27 @@ const asyncMiddleware = fn =>
   };
 
 // ========== configure IPFS/Orbit ========== //
-let db;
-const IPFS = require('ipfs');
-const OrbitDB = require('orbit-db');
-const ipfsOptions = {
-  EXPERIMENTAL: {
-    pubsub: true
-  },
-}
-const ipfs = new IPFS(ipfsOptions);
+// let db;
+// const IPFS = require('ipfs');
+// const OrbitDB = require('orbit-db');
+// const ipfsOptions = {
+//   EXPERIMENTAL: {
+//     pubsub: true
+//   },
+// }
+// const ipfs = new IPFS(ipfsOptions);
 
-ipfs.on('ready', async () => {
-  let orbitdb = new OrbitDB(ipfs);
-  try {
-    db = await orbitdb.kvstore('zlto');
-  } catch (e) {
-    console.log('error in creating orbit db: ', e);
-  }
-});
+// ipfs.on('ready', async () => {
+//   let orbitdb = new OrbitDB(ipfs);
+//   try {
+//     db = await orbitdb.kvstore('zlto');
+//   } catch (e) {
+//     console.log('error in creating orbit db: ', e);
+//   }
+// });
+const level = require('level');
+var db = level('./mydb');
+
 
 if (isDeveloping) {
   const compiler = webpack(config);
@@ -85,7 +88,7 @@ app.post('/newRequest', async function(req, res) {
     evaluations: []
   };
   if(db) {
-    await db.put(req.body.id, newReqObj);
+    await db.put(req.body.id, JSON.stringify(newReqObj));
     res.send('successfully stored new request object!');
   } else {
     res.send('no db instance');
@@ -94,11 +97,14 @@ app.post('/newRequest', async function(req, res) {
 
 app.get('/checkRequest', async function(req, res) {
   if(db) {
-    let storedRequest = await db.get(req.param('id'));
-    if(storedRequest) {
-      res.send(storedRequest);
-    } else {
-      res.send('no request matching specified id');
+    try {
+      let storedRequest = await db.get(req.param('id'), { asBuffer: false });
+      if(storedRequest) {
+        res.setHeader('Content-Type', 'application/json');
+        res.send(storedRequest);
+      }
+    } catch (e) {
+      res.send(e);
     }
   } else {
     res.send('no db instance');
@@ -107,11 +113,20 @@ app.get('/checkRequest', async function(req, res) {
 
 app.post('/newEvaluation', async function(req, res) {
   const requesterID = req.body.reqid;
+  console.log('requesterID: ', requesterID);
   if(db) {
     try {
-      const storedRequest = await db.get(requesterID);
+      let storedRequest = await db.get(requesterID, { asBuffer: false });
       if(storedRequest) {
+        console.log('storedRequest: ', storedRequest);
+
+        storedRequest = JSON.parse(storedRequest);
+        console.log('storedRequest: ', storedRequest);
+
+
         const storedEvals = storedRequest.evaluations;
+
+        console.log('storedEvals: ', storedEvals);
         const evaluatorExists = _.find(storedEvals, eval => eval.evaluator.id === req.body.evaluator.id);
         const { judgment, evaluator } = req.body
 
@@ -194,6 +209,7 @@ app.post('/newEvaluation', async function(req, res) {
         res.send('no request matching specified id');
       }
     } catch(e) {
+      console.log('e: ', e);
       res.send('error in obtaining request with specified id: ', e);
     }
   } else {
