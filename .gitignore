@@ -1,5 +1,5 @@
 package-lock.json
-yarn.lock
+*.lock
 node_modules/*
 orbitdb/*
 mydb/*
