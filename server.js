@@ -52,7 +52,6 @@ const asyncMiddleware = fn =>
 const level = require('level');
 var db = level('./mydb');
 
-
 if (isDeveloping) {
   const compiler = webpack(config);
   const middleware = webpackMiddleware(compiler, {
@@ -130,7 +129,7 @@ app.post('/newEvaluation', async function(req, res) {
             evaluator,
             judgment
           };
-          // ============  1) Cost Function: calculate stake for the new evaluator ============
+          // ============  Step 1) Cost Function: calculate stake for the new evaluator ============
           // Vk
           const reputationCommitted = storedEvals.length > 0 
             ? storedEvals
@@ -139,18 +138,14 @@ app.post('/newEvaluation', async function(req, res) {
             : 0;
 
           console.log('reputationCommitted: ', reputationCommitted);
-          // R
-          const { repToBeGained } = storedRequest.metadata;
-          // s
-          const STAKE_FRACTION = 0.15; // negative slope of rep flow curve
-
+          const { repToBeGained } = storedRequest.metadata; // R
+          const STAKE_FRACTION = 0.15; // s (negative slope of rep flow curve)
           newEvaluation.evaluator.stake = (1-reputationCommitted/repToBeGained) * (newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
           newEvaluation.evaluator.reputationDuring = newEvaluation.evaluator.reputationBefore - newEvaluation.evaluator.stake;
-  
           // Track progress
           storedRequest.reputationProduced = newEvaluation.evaluator.reputationDuring - newEvaluation.evaluator.reputationBefore;
 
-          // ============ 2) Rep flow: recalculate rep for committed evaluators ============
+          // ============ Step 2) Rep flow: recalculate rep for committed evaluators ============
           const STAKE_DIST_FRACTION = 0.6; // positive slope of rep flow curve
           // Wk
           const reputationInAgreement = storedEvals.length > 0 
@@ -176,7 +171,7 @@ app.post('/newEvaluation', async function(req, res) {
               storedRequest.reputationProduced += eval.evaluator.reputationDuring - eval.evaluator.reputationBefore;
             });
           }
-          // ============ 3) Store updated evals ============ 
+          // ============ Step 3) Store updated evals ============ 
           storedEvals.push(newEvaluation);
           storedRequest.evaluations = storedEvals;
         }
