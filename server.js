@@ -8,6 +8,8 @@ const webpackHotMiddleware = require('webpack-hot-middleware');
 const config = require('./webpack.config.js');
 const _ = require('lodash');
 
+const experiment = require('./experiment/setup');
+
 const isDeveloping = process.env.NODE_ENV !== 'production';
 const port = isDeveloping ? 3000 : process.env.PORT;
 const app = express();
@@ -108,6 +110,10 @@ app.get('/checkRequest', async function(req, res) {
   } else {
     res.send('no db instance');
   }
+});
+
+app.get('/runExperiment', async function(req, res) {
+  experiment.generateExperiment(20, 30);
 });
 
 app.post('/newEvaluation', async function(req, res) {
