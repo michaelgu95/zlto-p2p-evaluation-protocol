@@ -165,7 +165,6 @@ app.post('/newEvaluation', async function(req, res) {
                                                     * eval.evaluator.reputationDuring 
                                                     * newEvaluation.evaluator.reputationDuring 
                                                     / reputationInAgreement);
-
               }
              // Track progress
               storedRequest.reputationProduced += eval.evaluator.reputationDuring - eval.evaluator.reputationBefore;
