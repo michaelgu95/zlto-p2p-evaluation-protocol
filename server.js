@@ -82,6 +82,20 @@ if (isDeveloping) {
   // });
 }
 
+app.delete('/cancelRequest', async function(req, res) {
+  if(db) {
+    let id = req.param('id');
+    db.del(id, function (err) {
+      if(err) {
+        res.status(500).send({ error: 'error in deleting the request' });
+      }
+    });
+    res.json({'message': `successfully deleted request with id: ${id}`});
+  } else {
+    res.status(500).send({ error: 'no db instance' });
+  }
+});
+
 app.post('/newRequest', async function(req, res) {
   let newReqObj = {
     requesterID: req.body.id,
@@ -92,7 +106,7 @@ app.post('/newRequest', async function(req, res) {
     await db.put(req.body.id, JSON.stringify(newReqObj));
     res.json({'message': 'successfully stored new request object!', 'storedRequest': newReqObj});
   } else {
-    res.send('no db instance');
+    res.status(500).send({ error: 'no db instance' });
   }
 });
 
@@ -108,7 +122,7 @@ app.get('/checkRequest', async function(req, res) {
       res.send(e);
     }
   } else {
-    res.send('no db instance');
+    res.status(500).send({ error: 'no db instance' });
   }
 });
 
@@ -189,23 +203,28 @@ app.post('/newEvaluation', async function(req, res) {
           
           if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
             processEvaluations(storedRequest.evaluations);
-            res.send('Evaluation fulfilled, cleared in orbitDB, ready for on-chain sync');
+
+            db.del(requesterID, function(err) {
+              if (err) console.log('error in deleting the completed evaluation');
+            });
+
+            res.json({'message': 'Bounty fulfilled, work asset created, evaluation cycle ended', 'workAsset': storedRequest});
           } else {
             // TODO: Django server will deduct the stake from the evaluator's live reputation
             res.send(storedRequest);
           }
         } catch(e) {
-          res.send('error in storing request with updated evaluator: ', e);
+          res.status(500).send({ error: 'error in storing request with updated evaluator' });
         }
       } else {
-        res.send('no request matching specified id');
+        res.status(500).send({ error: 'error in obtaining request with specified id' });
       }
     } catch(e) {
       console.log('e: ', e);
-      res.send('error in obtaining request with specified id: ', e);
+      res.status(500).send({ error: 'error in obtaining request with specified id' });
     }
   } else {
-    res.send('no db instance');
+    res.status(500).send({ error: 'no db instance' });
   }
 });
 
