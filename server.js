@@ -8,7 +8,6 @@ const webpackHotMiddleware = require('webpack-hot-middleware');
 const config = require('./webpack.config.js');
 const _ = require('lodash');
 
-const experiment = require('./experiment/setup');
 
 const isDeveloping = process.env.NODE_ENV !== 'production';
 const port = isDeveloping ? 3000 : process.env.PORT;
@@ -82,6 +81,11 @@ if (isDeveloping) {
   // });
 }
 
+// const experiment = require('./experiment/setup');
+// app.get('/runExperiment', async function(req, res) {
+//   experiment.generateExperiment(20, 30);
+// });
+
 app.delete('/cancelRequest', async function(req, res) {
   if(db) {
     let id = req.param('id');
@@ -124,10 +128,6 @@ app.get('/checkRequest', async function(req, res) {
   } else {
     res.status(500).send({ error: 'no db instance' });
   }
-});
-
-app.get('/runExperiment', async function(req, res) {
-  experiment.generateExperiment(20, 30);
 });
 
 app.post('/newEvaluation', async function(req, res) {
