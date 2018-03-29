@@ -90,7 +90,7 @@ app.post('/newRequest', async function(req, res) {
   };
   if(db) {
     await db.put(req.body.id, JSON.stringify(newReqObj));
-    res.send('successfully stored new request object!');
+    res.json({'result': 'successfully stored new request object!'});
   } else {
     res.send('no db instance');
   }
