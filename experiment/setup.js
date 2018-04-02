@@ -2,8 +2,7 @@ var gaussian = require('gaussian');
 var randomInt = require('random-int');
 
 const NUM_EXPERIMENTS = 10;
-const NUM_JUDGES = 100
-
+const NUM_JUDGES = 100;
 
 function generateJudge(accuracy, precision) {
 	let distribution = gaussian(accuracy, precision);

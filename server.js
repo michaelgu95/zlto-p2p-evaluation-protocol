@@ -1,22 +1,17 @@
 /* eslint no-console: 0 */
-
+const _ = require('lodash');
 const path = require('path');
 const express = require('express');
 const webpack = require('webpack');
 const webpackMiddleware = require('webpack-dev-middleware');
 const webpackHotMiddleware = require('webpack-hot-middleware');
 const config = require('./webpack.config.js');
-const _ = require('lodash');
-
-
 const isDeveloping = process.env.NODE_ENV !== 'production';
 const port = isDeveloping ? 3000 : process.env.PORT;
 const app = express();
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(bodyParser.json());
-
-// const NUM_EVALUATORS_REQUIRED = 10;
 
 function processEvaluations(evaluations) {
   //TODO: createWorkAsset, submitAssetToCentral, submitAssetToChain
