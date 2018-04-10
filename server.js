@@ -162,17 +162,14 @@ app.post('/newEvaluation', async function(req, res) {
 
           // ============ Step 2) Rep flow: recalculate rep for committed evaluators ============
           const STAKE_DIST_FRACTION = 0.6; // positive slope of rep flow curve
-          // Wk
-          const reputationInAgreement = storedEvals.length > 0 
-            ? storedEvals
-              .filter(eval => eval.judgment === judgment)
-              .map(eval => eval.evaluator.reputationDuring)
-              .reduce((a,b) => a + b, 0)
-            : 0;
-
-          console.log('reputationInAgreement: ', reputationInAgreement);
-
+          
           if (storedEvals.length > 0) {
+              // Wk
+              const reputationInAgreement = storedEvals.filter(eval => eval.judgment === judgment)
+                                                        .map(eval => eval.evaluator.reputationDuring)
+                                                        .reduce((a,b) => a + b, 0);
+              console.log('reputationInAgreement: ', reputationInAgreement);
+
               storedEvals.forEach(eval => {
               const agreesWithCurrent = eval.judgment === newEvaluation.judgment;
               if(agreesWithCurrent) {
