@@ -2,7 +2,6 @@
 A node server for p2p evaluation of work. Primarily for performance comparisons against decentralized smart contract.
 
 **NOTE!** Use the latest version of Node, 9.x.x.
-
 ## Install and Running
 `git clone https://github.com/christianalfoni/webpack-express-boilerplate.git`
 
