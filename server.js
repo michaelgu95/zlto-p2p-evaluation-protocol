@@ -13,39 +13,19 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(bodyParser.json());
 
-
-
 const asyncMiddleware = fn =>
   (req, res, next) => {
     Promise.resolve(fn(req, res, next))
       .catch(next);
   };
 
-// ========== configure IPFS/Orbit ========== //
-// let db;
-// const IPFS = require('ipfs');
-// // const OrbitDB = require('orbit-db');
-// const ipfsOptions = {
-//   EXPERIMENTAL: {
-//     pubsub: true
-//   },
-// }
-// const ipfs = new IPFS(ipfsOptions);
-
-// ipfs.on('ready', async () => {
-//   let orbitdb = new OrbitDB(ipfs);
-//   try {
-//     db = await orbitdb.kvstore('zlto');
-//   } catch (e) {
-//     console.log('error in creating orbit db: ', e);
-//   }
-// });
 const IPFS = require('ipfs-mini');
 const ipfs = new IPFS({ host: 'localhost', port: 5001, protocol: 'http' });
 
 function finalizeWorkAsset(data) {
   console.log('processing evals with data: ', data)
-  //TODO: createWorkAsset, submitAssetToCentral, submitAssetToChain
+  //TODO:   add finalized work asset into a store that expires every week. 
+         // expose endpoint for Django to pull down from.
   _.forEach(data.evaluations, eval => {
     console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
   });
