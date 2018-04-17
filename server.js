@@ -13,12 +13,7 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(bodyParser.json());
 
-function processEvaluations(evaluations) {
-  //TODO: createWorkAsset, submitAssetToCentral, submitAssetToChain
-  _.forEach(evaluations, eval => {
-    console.log(`Reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
-  });
-}
+
 
 const asyncMiddleware = fn =>
   (req, res, next) => {
@@ -29,7 +24,7 @@ const asyncMiddleware = fn =>
 // ========== configure IPFS/Orbit ========== //
 // let db;
 // const IPFS = require('ipfs');
-// const OrbitDB = require('orbit-db');
+// // const OrbitDB = require('orbit-db');
 // const ipfsOptions = {
 //   EXPERIMENTAL: {
 //     pubsub: true
@@ -45,6 +40,22 @@ const asyncMiddleware = fn =>
 //     console.log('error in creating orbit db: ', e);
 //   }
 // });
+const IPFS = require('ipfs-mini');
+const ipfs = new IPFS({ host: 'localhost', port: 5001, protocol: 'http' });
+
+function finalizeWorkAsset(data) {
+  console.log('processing evals with data: ', data)
+  //TODO: createWorkAsset, submitAssetToCentral, submitAssetToChain
+  _.forEach(data.evaluations, eval => {
+    console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
+  });
+
+  ipfs.addJSON(data, (err, result) => {
+    console.log(err, result);
+  });
+}
+
+// LevelDB to store intermediate states of evaluation cycles
 const level = require('level');
 var db = level('./mydb');
 
@@ -153,11 +164,12 @@ app.post('/newEvaluation', async function(req, res) {
             : 0;
 
           console.log('reputationCommitted: ', reputationCommitted);
+
           const { repToBeGained } = storedRequest.metadata; // R
           const STAKE_FRACTION = 0.15; // s (negative slope of rep flow curve)
+          
           newEvaluation.evaluator.stake = (1-reputationCommitted/repToBeGained) * (newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
           newEvaluation.evaluator.reputationDuring = newEvaluation.evaluator.reputationBefore - newEvaluation.evaluator.stake;
-          // Track progress
           storedRequest.reputationProduced = newEvaluation.evaluator.reputationDuring - newEvaluation.evaluator.reputationBefore;
 
           // ============ Step 2) Rep flow: recalculate rep for committed evaluators ============
@@ -194,7 +206,7 @@ app.post('/newEvaluation', async function(req, res) {
           console.log('reputationProduced: ', storedRequest.reputationProduced);
           
           if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
-            processEvaluations(storedRequest.evaluations);
+            finalizeWorkAsset(storedRequest);
 
             db.del(requesterID, function(err) {
               if (err) console.log('error in deleting the completed evaluation');
