@@ -22,6 +22,9 @@ const asyncMiddleware = fn =>
 const IPFS = require('ipfs-mini');
 const ipfs = new IPFS({ host: 'localhost', port: 5001, protocol: 'http' });
 
+let contract = require('./eth/createContract');
+console.log('contract: ', contract);
+
 function finalizeWorkAsset(data) {
   console.log('processing evals with data: ', data)
   //TODO:   add finalized work asset into a store that expires every week. 
@@ -30,8 +33,12 @@ function finalizeWorkAsset(data) {
     console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
   });
 
-  ipfs.addJSON(data, (err, result) => {
-    console.log(err, result);
+  ipfs.addJSON(data, (err, ipfsHash) => {
+    console.log(err, ipfsHash);
+    contract.contract.notarizeHash(1, ipfsHash, (err, result => {
+      if (err) console.log('contract call error: ', err);
+      console.log('contract call: ', result);
+    }));
   });
 }
 
