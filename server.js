@@ -88,7 +88,8 @@ app.delete('/cancelRequest', async function(req, res) {
 
 app.post('/newRequest', async function(req, res) {
   let newReqObj = {
-    requesterID: req.body.id,
+    id: req.body.id,
+    requesterId: req.body.requesterId,
     metadata: req.body.metadata,
     evaluations: []
   };
@@ -117,10 +118,10 @@ app.get('/checkRequest', async function(req, res) {
 });
 
 app.post('/newEvaluation', async function(req, res) {
-  const requesterID = req.body.reqid;
+  const requestId = req.body.id;
   if(db) {
     try {
-      let query = await db.get(requesterID, { asBuffer: false });
+      let query = await db.get(requestId, { asBuffer: false });
       if(query) {
         storedRequest = JSON.parse(query);
         const storedEvals = storedRequest.evaluations;
@@ -179,7 +180,7 @@ app.post('/newEvaluation', async function(req, res) {
         }
 
         try {
-          await db.put(requesterID, JSON.stringify(storedRequest));
+          await db.put(requestId, JSON.stringify(storedRequest));
           // Enough evaluations have come through OR enough reputation has come through:
           // if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
           console.log('reputationProduced: ', storedRequest.reputationProduced);
@@ -187,7 +188,7 @@ app.post('/newEvaluation', async function(req, res) {
           if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
             finalizeWorkAsset(storedRequest);
 
-            db.del(requesterID, function(err) {
+            db.del(requestId, function(err) {
               if (err) console.log('error in deleting the completed evaluation');
             });
 
