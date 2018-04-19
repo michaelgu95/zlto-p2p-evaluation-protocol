@@ -164,18 +164,17 @@ app.post('/newEvaluation', async function(req, res) {
           
           if (storedEvals.length > 0) {
               // Wk
-              const reputationInAgreement = storedEvals.filter(eval => eval.judgment === judgment)
-                                                        .map(eval => eval.evaluator.reputationDuring)
-                                                        .reduce((a,b) => a + b, 0);
+              const reputationInAgreement = storedEvals
+                .filter(eval => eval.judgment === judgment)
+                .map(eval => eval.evaluator.reputationDuring)
+                .reduce((a,b) => a + b, 0);
               console.log('reputationInAgreement: ', reputationInAgreement);
 
               storedEvals.forEach(eval => {
               const agreesWithCurrent = eval.judgment === newEvaluation.judgment;
               if(agreesWithCurrent) {
-                eval.evaluator.reputationDuring += (STAKE_DIST_FRACTION 
-                                                    * eval.evaluator.reputationDuring 
-                                                    * newEvaluation.evaluator.reputationDuring 
-                                                    / reputationInAgreement);
+                const repayment = STAKE_DIST_FRACTION * eval.evaluator.reputationDuring * newEvaluation.evaluator.reputationDuring / reputationInAgreement;
+                eval.evaluator.reputationDuring += repayment;
               }
              // Track progress
               storedRequest.reputationProduced += eval.evaluator.reputationDuring - eval.evaluator.reputationBefore;
