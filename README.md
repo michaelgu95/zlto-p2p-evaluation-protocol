@@ -27,7 +27,18 @@ Example Body:
 ```
 Response:
 ```JavaScript
-successfully stored new request object!
+{
+    "message": "successfully stored new request object!",
+    "storedRequest": {
+        "requesterID": 450,
+        "metadata": {
+            "type": "educational",
+            "numHours": 25,
+            "repToBeGained": 300
+        },
+        "evaluations": []
+    }
+}
 ```
 
 ### GET /checkRequest
