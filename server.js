@@ -80,7 +80,7 @@ app.delete('/cancelRequest', async function(req, res) {
         res.status(500).send({ error: 'error in deleting the request' });
       }
     });
-    res.json({'message': `successfully deleted request with id: ${id}`});
+    res.json({'message': 'success'});
   } else {
     res.status(500).send({ error: 'no db instance' });
   }
@@ -94,7 +94,7 @@ app.post('/newRequest', async function(req, res) {
   };
   if(db) {
     await db.put(req.body.id, JSON.stringify(newReqObj));
-    res.json({'message': 'successfully stored new request object!', 'storedRequest': newReqObj});
+    res.json({'message': 'success', 'storedRequest': newReqObj});
   } else {
     res.status(500).send({ error: 'no db instance' });
   }
@@ -106,7 +106,7 @@ app.get('/checkRequest', async function(req, res) {
       let storedRequest = await db.get(req.param('id'), { asBuffer: false });
       if(storedRequest) {
         res.setHeader('Content-Type', 'application/json');
-        res.send(storedRequest);
+        res.send({'message': 'success', 'storedRequest': JSON.parse(storedRequest)});
       }
     } catch (e) {
       res.send(e);
@@ -191,10 +191,10 @@ app.post('/newEvaluation', async function(req, res) {
               if (err) console.log('error in deleting the completed evaluation');
             });
 
-            res.json({'message': 'Bounty fulfilled, work asset created, evaluation cycle ended', 'workAsset': storedRequest});
+            res.json({'message': 'success', 'workAsset': storedRequest});
           } else {
             // TODO: Django server will deduct the stake from the evaluator's live reputation
-            res.send(storedRequest);
+            res.send({'message': 'success', storedRequest});
           }
         } catch(e) {
           res.status(500).send({ error: 'error in storing request with updated evaluator' });
