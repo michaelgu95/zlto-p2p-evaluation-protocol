@@ -138,18 +138,18 @@ app.post('/newEvaluation', async function(req, res) {
           };
           // ============  Step 1) Cost Function: calculate stake for the new evaluator ============
           // Vk
-          const reputationCommitted = storedEvals.length > 0 
+          const repGained = storedEvals.length > 0 
             ? storedEvals
-              .map(eval => eval.evaluator.reputationDuring)
+              .map(eval => (eval.evaluator.reputationDuring - eval.evaluator.reputationBefore))
               .reduce((a,b) => a + b, 0)
             : 0;
 
-          console.log('reputationCommitted: ', reputationCommitted);
+          console.log('repGained: ', repGained);
 
           const { repToBeGained } = storedRequest.metadata; // R
           const STAKE_FRACTION = 0.15; // s (negative slope of rep flow curve)
           
-          newEvaluation.evaluator.stake = (1-reputationCommitted/repToBeGained) * (newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
+          newEvaluation.evaluator.stake = (1-repGained/repToBeGained) * (newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
           newEvaluation.evaluator.reputationDuring = newEvaluation.evaluator.reputationBefore - newEvaluation.evaluator.stake;
           storedRequest.reputationProduced = newEvaluation.evaluator.reputationDuring - newEvaluation.evaluator.reputationBefore;
 
@@ -192,7 +192,7 @@ app.post('/newEvaluation', async function(req, res) {
               if (err) console.log('error in deleting the completed evaluation');
             });
 
-            res.json({'message': 'success', 'workAsset': storedRequest});
+            res.json({'message': 'success', 'details': 'evaluation cycle completed, workAsset finalized', 'workAsset': storedRequest});
           } else {
             // TODO: Django server will deduct the stake from the evaluator's live reputation
             res.send({'message': 'success', storedRequest});
