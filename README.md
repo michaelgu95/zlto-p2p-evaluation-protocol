@@ -86,7 +86,7 @@ Response (once evaluation cycle ends):
         "evaluations": [
             {
                 "evaluator": {
-                    "name": "Michael Gu",
+                    "name": "Kurt",
                     "id": 355,
                     "reputationBefore": 150,
                     "stake": 15,
@@ -97,7 +97,7 @@ Response (once evaluation cycle ends):
             },
             {
                 "evaluator": {
-                    "name": "Michael Gu",
+                    "name": "Allan",
                     "id": 315,
                     "reputationBefore": 150,
                     "stake": 17.25,
@@ -108,7 +108,7 @@ Response (once evaluation cycle ends):
             },
             {
                 "evaluator": {
-                    "name": "Michael Gu",
+                    "name": "Marlon",
                     "id": 317,
                     "reputationBefore": 150,
                     "stake": 7.890000000000001,
