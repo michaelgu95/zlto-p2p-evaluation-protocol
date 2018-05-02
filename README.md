@@ -70,28 +70,56 @@ Example Body:
 }
 
 ```
-Response:
+Response (once evaluation cycle ends):
 ```JavaScript
 {
-    "requesterID": 460,
-    "metadata": {
-        "type": "educational",
-        "numHours": 25,
-        "repToBeGained": 500
-    },
-    "evaluations": [
-        {
-            "evaluator": {
-                "name": "gu",
-                "id": 101,
-                "reputationBefore": 300,
-                "stake": 45,
-                "reputationDuring": 255
+    "message": "success",
+    "details": "evaluation cycle completed, workAsset finalized",
+    "workAsset": {
+        "id": 450,
+        "requesterId": 2,
+        "metadata": {
+            "type": "educational",
+            "numHours": 25,
+            "repToBeGained": 100
+        },
+        "evaluations": [
+            {
+                "evaluator": {
+                    "name": "Michael Gu",
+                    "id": 355,
+                    "reputationBefore": 150,
+                    "stake": 15,
+                    "reputationDuring": 267.3337849740933,
+                    "finalRepGained": 88.44299592517545
+                },
+                "judgment": true
             },
-            "judgment": false
-        }
-    ],
-    "reputationProduced": -45
+            {
+                "evaluator": {
+                    "name": "Michael Gu",
+                    "id": 315,
+                    "reputationBefore": 150,
+                    "stake": 17.25,
+                    "reputationDuring": 165.33221502590675,
+                    "finalRepGained": 11.557004074824553
+                },
+                "judgment": true
+            },
+            {
+                "evaluator": {
+                    "name": "Michael Gu",
+                    "id": 317,
+                    "reputationBefore": 150,
+                    "stake": 7.890000000000001,
+                    "reputationDuring": 142.11,
+                    "finalRepGained": 0
+                },
+                "judgment": true
+            }
+        ],
+        "reputationProduced": 100
+    }
 }
 ```
 
