@@ -25,8 +25,7 @@ const ipfs = new IPFS({ host: 'localhost', port: 5001, protocol: 'http' });
 function finalizeWorkAsset(data) {
   console.log('processing evals with data: ', data)
   //TODO:   add finalized work asset into a store that expires every week. 
-         // expose endpoint for Django to pull down from.
-  
+  // expose endpoint for Django to pull down from.
   ipfs.addJSON(data, (err, result) => {
     console.log(err, result);
   });
@@ -35,7 +34,6 @@ function finalizeWorkAsset(data) {
 function normalizeRep(data) {
   _.forEach(data.evaluations, eval => {
     const { reputationBefore, reputationDuring } = eval.evaluator;
-
     const repDiff = reputationDuring - reputationBefore;
     if(repDiff < 0) {
       // if lost rep, set it back to 0
@@ -44,7 +42,6 @@ function normalizeRep(data) {
       const normalizedRep = (repDiff / data.reputationProduced) * data.metadata.repToBeGained;
       eval.evaluator.finalRepGained = normalizedRep;
     }
-
     console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.finalRepGained}`);
   });
   // set these two fields equal for consistency
@@ -210,7 +207,7 @@ app.post('/newEvaluation', async function(req, res) {
             db.del(requestId, function(err) {
               if (err) console.log('error in deleting the completed evaluation');
             });
-
+            
             res.json({'message': 'success', 'details': 'evaluation cycle completed, workAsset finalized', 'workAsset': storedRequest});
           } else {
             // TODO: Django server will deduct the stake from the evaluator's live reputation
