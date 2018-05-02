@@ -26,13 +26,30 @@ function finalizeWorkAsset(data) {
   console.log('processing evals with data: ', data)
   //TODO:   add finalized work asset into a store that expires every week. 
          // expose endpoint for Django to pull down from.
-  _.forEach(data.evaluations, eval => {
-    console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
-  });
-
+  
   ipfs.addJSON(data, (err, result) => {
     console.log(err, result);
   });
+}
+
+function normalizeRep(data) {
+  _.forEach(data.evaluations, eval => {
+    const { reputationBefore, reputationDuring } = eval.evaluator;
+
+    const repDiff = reputationDuring - reputationBefore;
+    if(repDiff < 0) {
+      // if lost rep, set it back to 0
+      eval.evaluator.finalRepGained = 0;
+    } else {
+      const normalizedRep = (repDiff / data.reputationProduced) * data.metadata.repToBeGained;
+      eval.evaluator.finalRepGained = normalizedRep;
+    }
+
+    console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.finalRepGained}`);
+  });
+  // set these two fields equal for consistency
+  data.reputationProduced = data.metadata.repToBeGained;
+  return data;
 }
 
 // LevelDB to store intermediate states of evaluation cycles
@@ -147,11 +164,12 @@ app.post('/newEvaluation', async function(req, res) {
           console.log('repGained: ', repGained);
 
           const { repToBeGained } = storedRequest.metadata; // R
-          const STAKE_FRACTION = 0.15; // s (negative slope of rep flow curve)
-          
+          const STAKE_FRACTION = 0.10; // s (negative slope of rep flow curve)
           newEvaluation.evaluator.stake = (1-repGained/repToBeGained) * (newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
           newEvaluation.evaluator.reputationDuring = newEvaluation.evaluator.reputationBefore - newEvaluation.evaluator.stake;
-          storedRequest.reputationProduced = newEvaluation.evaluator.reputationDuring - newEvaluation.evaluator.reputationBefore;
+
+          const repDiff = newEvaluation.evaluator.reputationDuring - newEvaluation.evaluator.reputationBefore;
+          storedRequest.reputationProduced = repDiff > 0 ? repDiff : 0; 
 
           // ============ Step 2) Rep flow: recalculate rep for committed evaluators ============
           const STAKE_DIST_FRACTION = 0.6; // positive slope of rep flow curve
@@ -186,6 +204,7 @@ app.post('/newEvaluation', async function(req, res) {
           console.log('reputationProduced: ', storedRequest.reputationProduced);
           
           if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
+            storedRequest = normalizeRep(storedRequest);
             finalizeWorkAsset(storedRequest);
 
             db.del(requestId, function(err) {
