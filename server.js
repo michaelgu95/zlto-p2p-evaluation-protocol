@@ -22,8 +22,13 @@ const asyncMiddleware = fn =>
 const IPFS = require('ipfs-mini');
 const ipfs = new IPFS({ host: 'localhost', port: 5001, protocol: 'http' });
 
-let contract = require('./eth/createContract');
-console.log('contract: ', contract);
+let contract;
+let createContract = require('./eth/createContract').createContract;
+createContract().then(instance => {
+  console.log('instance: ', instance);
+  contract = instance;
+});
+// console.log('contract: ', createContract());
 
 function finalizeWorkAsset(data) {
   console.log('processing evals with data: ', data)
@@ -35,9 +40,8 @@ function finalizeWorkAsset(data) {
 
   ipfs.addJSON(data, (err, ipfsHash) => {
     console.log(err, ipfsHash);
-    contract.contract.notarizeHash(1, ipfsHash, (err, result => {
+    contract.contract.notarizeHash(100, ipfsHash, (err, result => {
       if (err) console.log('contract call error: ', err);
-      console.log('contract call: ', result);
     }));
   });
 }
@@ -124,7 +128,7 @@ app.get('/checkRequest', async function(req, res) {
 });
 
 app.post('/newEvaluation', async function(req, res) {
-  const requesterID = req.body.reqid;
+  const requesterID = req.body.id;
   if(db) {
     try {
       let query = await db.get(requesterID, { asBuffer: false });
