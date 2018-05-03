@@ -1,6 +1,6 @@
 package-lock.json
 *.lock
-node_modules/*
+*node_modules/*
 orbitdb/*
 mydb/*
 experiment/*
