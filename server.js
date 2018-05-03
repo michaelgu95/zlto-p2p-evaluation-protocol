@@ -33,7 +33,7 @@ createContract().then(instance => {
 function finalizeWorkAsset(data) {
   console.log('processing evals with data: ', data)
   //TODO:   add finalized work asset into a store that expires every week. 
-         // expose endpoint for Django to pull down from.
+  // expose endpoint for Django to pull down from.
   _.forEach(data.evaluations, eval => {
     console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
   });
@@ -44,6 +44,24 @@ function finalizeWorkAsset(data) {
       if (err) console.log('contract call error: ', err);
     }));
   });
+}
+
+function normalizeRep(data) {
+  _.forEach(data.evaluations, eval => {
+    const { reputationBefore, reputationDuring } = eval.evaluator;
+    const repDiff = reputationDuring - reputationBefore;
+    if(repDiff < 0) {
+      // if lost rep, set it back to 0
+      eval.evaluator.finalRepGained = 0;
+    } else {
+      const normalizedRep = (repDiff / data.reputationProduced) * data.metadata.repToBeGained;
+      eval.evaluator.finalRepGained = normalizedRep;
+    }
+    console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.finalRepGained}`);
+  });
+  // set these two fields equal for consistency
+  data.reputationProduced = data.metadata.repToBeGained;
+  return data;
 }
 
 // LevelDB to store intermediate states of evaluation cycles
@@ -91,7 +109,7 @@ app.delete('/cancelRequest', async function(req, res) {
         res.status(500).send({ error: 'error in deleting the request' });
       }
     });
-    res.json({'message': `successfully deleted request with id: ${id}`});
+    res.json({'message': 'success'});
   } else {
     res.status(500).send({ error: 'no db instance' });
   }
@@ -99,13 +117,14 @@ app.delete('/cancelRequest', async function(req, res) {
 
 app.post('/newRequest', async function(req, res) {
   let newReqObj = {
-    requesterID: req.body.id,
+    id: req.body.id,
+    requesterId: req.body.requesterId,
     metadata: req.body.metadata,
     evaluations: []
   };
   if(db) {
     await db.put(req.body.id, JSON.stringify(newReqObj));
-    res.json({'message': 'successfully stored new request object!', 'storedRequest': newReqObj});
+    res.json({'message': 'success', 'storedRequest': newReqObj});
   } else {
     res.status(500).send({ error: 'no db instance' });
   }
@@ -117,7 +136,7 @@ app.get('/checkRequest', async function(req, res) {
       let storedRequest = await db.get(req.param('id'), { asBuffer: false });
       if(storedRequest) {
         res.setHeader('Content-Type', 'application/json');
-        res.send(storedRequest);
+        res.send({'message': 'success', 'storedRequest': JSON.parse(storedRequest)});
       }
     } catch (e) {
       res.send(e);
@@ -128,10 +147,11 @@ app.get('/checkRequest', async function(req, res) {
 });
 
 app.post('/newEvaluation', async function(req, res) {
-  const requesterID = req.body.id;
+  const requestId = req.body.id;
+
   if(db) {
     try {
-      let query = await db.get(requesterID, { asBuffer: false });
+      let query = await db.get(requestId, { asBuffer: false });
       if(query) {
         storedRequest = JSON.parse(query);
         const storedEvals = storedRequest.evaluations;
@@ -148,20 +168,21 @@ app.post('/newEvaluation', async function(req, res) {
           };
           // ============  Step 1) Cost Function: calculate stake for the new evaluator ============
           // Vk
-          const reputationCommitted = storedEvals.length > 0 
+          const repGained = storedEvals.length > 0 
             ? storedEvals
-              .map(eval => eval.evaluator.reputationDuring)
+              .map(eval => (eval.evaluator.reputationDuring - eval.evaluator.reputationBefore))
               .reduce((a,b) => a + b, 0)
             : 0;
 
-          console.log('reputationCommitted: ', reputationCommitted);
+          console.log('repGained: ', repGained);
 
           const { repToBeGained } = storedRequest.metadata; // R
-          const STAKE_FRACTION = 0.15; // s (negative slope of rep flow curve)
-          
-          newEvaluation.evaluator.stake = (1-reputationCommitted/repToBeGained) * (newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
+          const STAKE_FRACTION = 0.10; // s (negative slope of rep flow curve)
+          newEvaluation.evaluator.stake = (1-repGained/repToBeGained) * (newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
           newEvaluation.evaluator.reputationDuring = newEvaluation.evaluator.reputationBefore - newEvaluation.evaluator.stake;
-          storedRequest.reputationProduced = newEvaluation.evaluator.reputationDuring - newEvaluation.evaluator.reputationBefore;
+
+          const repDiff = newEvaluation.evaluator.reputationDuring - newEvaluation.evaluator.reputationBefore;
+          storedRequest.reputationProduced = repDiff > 0 ? repDiff : 0; 
 
           // ============ Step 2) Rep flow: recalculate rep for committed evaluators ============
           const STAKE_DIST_FRACTION = 0.6; // positive slope of rep flow curve
@@ -181,7 +202,8 @@ app.post('/newEvaluation', async function(req, res) {
                 eval.evaluator.reputationDuring += repayment;
               }
              // Track progress
-              storedRequest.reputationProduced += eval.evaluator.reputationDuring - eval.evaluator.reputationBefore;
+             const repDiff = eval.evaluator.reputationDuring - eval.evaluator.reputationBefore;
+              storedRequest.reputationProduced += repDiff > 0 ? repDiff : 0;
             });
           }
           // ============ Step 3) Store updated evals ============ 
@@ -190,22 +212,23 @@ app.post('/newEvaluation', async function(req, res) {
         }
 
         try {
-          await db.put(requesterID, JSON.stringify(storedRequest));
+          await db.put(requestId, JSON.stringify(storedRequest));
           // Enough evaluations have come through OR enough reputation has come through:
           // if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
           console.log('reputationProduced: ', storedRequest.reputationProduced);
           
           if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
+            storedRequest = normalizeRep(storedRequest);
             finalizeWorkAsset(storedRequest);
 
-            db.del(requesterID, function(err) {
+            db.del(requestId, function(err) {
               if (err) console.log('error in deleting the completed evaluation');
             });
-
-            res.json({'message': 'Bounty fulfilled, work asset created, evaluation cycle ended', 'workAsset': storedRequest});
+            
+            res.json({'message': 'success', 'details': 'evaluation cycle completed, workAsset finalized', 'workAsset': storedRequest});
           } else {
             // TODO: Django server will deduct the stake from the evaluator's live reputation
-            res.send(storedRequest);
+            res.send({'message': 'success', storedRequest});
           }
         } catch(e) {
           res.status(500).send({ error: 'error in storing request with updated evaluator' });

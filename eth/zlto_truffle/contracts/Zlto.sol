@@ -28,7 +28,7 @@ contract Zlto {
         owner = msg.sender;
     }
 
-    function notarizeHash(uint256 id, bytes32 documentHash) onlyOwner noHashExistsYet(id) public returns(bool){
+    function notarizeHash(uint256 id, bytes32 documentHash) onlyOwner public returns(bool){
         hashesById[id] = documentHash;
 
         ProofCreated(id, documentHash);
