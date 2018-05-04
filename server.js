@@ -32,9 +32,12 @@ function finalizeWorkAsset(data) {
 }
 
 function normalizeRep(data) {
+  let weightedDecision = 0;
+
   _.forEach(data.evaluations, eval => {
     const { reputationBefore, reputationDuring } = eval.evaluator;
     const repDiff = reputationDuring - reputationBefore;
+
     if(repDiff < 0) {
       // if lost rep, set it back to 0
       eval.evaluator.finalRepGained = 0;
@@ -42,10 +45,14 @@ function normalizeRep(data) {
       const normalizedRep = (repDiff / data.reputationProduced) * data.metadata.repToBeGained;
       eval.evaluator.finalRepGained = normalizedRep;
     }
+
+    weightedDecision += (eval.evaluator.finalRepGained * eval.judgment)
     console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.finalRepGained}`);
   });
+
   // set these two fields equal for consistency
   data.reputationProduced = data.metadata.repToBeGained;
+  data.finalJudgment = weightedDecision / data.reputationProduced;
   return data;
 }
 
@@ -152,18 +159,23 @@ app.post('/newEvaluation', async function(req, res) {
           };
           // ============  Step 1) Cost Function: calculate stake for the new evaluator ============
           // Vk
-          const repGained = storedEvals.length > 0 
+          let repGained = storedEvals.length > 0 
             ? storedEvals
               .map(eval => (eval.evaluator.reputationDuring - eval.evaluator.reputationBefore))
               .reduce((a,b) => a + b, 0)
             : 0;
 
           console.log('repGained: ', repGained);
+          repGained = repGained < 0 ? 0 : repGained;
 
           const { repToBeGained } = storedRequest.metadata; // R
           const STAKE_FRACTION = 0.10; // s (negative slope of rep flow curve)
-          newEvaluation.evaluator.stake = (1-repGained/repToBeGained) * (newEvaluation.evaluator.reputationBefore * STAKE_FRACTION);
-          newEvaluation.evaluator.reputationDuring = newEvaluation.evaluator.reputationBefore - newEvaluation.evaluator.stake;
+          const { reputationBefore } = newEvaluation.evaluator;
+          const stake = (1-repGained/repToBeGained) * (reputationBefore * STAKE_FRACTION);
+
+          // never let stake exceed how much rep they have (leads to negative  reputationDuring)
+          newEvaluation.evaluator.stake = stake > reputationBefore ? reputationBefore : stake;
+          newEvaluation.evaluator.reputationDuring = reputationBefore - newEvaluation.evaluator.stake;
 
           const repDiff = newEvaluation.evaluator.reputationDuring - newEvaluation.evaluator.reputationBefore;
           storedRequest.reputationProduced = repDiff > 0 ? repDiff : 0; 
@@ -183,10 +195,12 @@ app.post('/newEvaluation', async function(req, res) {
               const agreesWithCurrent = eval.judgment === newEvaluation.judgment;
               if(agreesWithCurrent) {
                 const repayment = STAKE_DIST_FRACTION * eval.evaluator.reputationDuring * newEvaluation.evaluator.reputationDuring / reputationInAgreement;
+                console.log('repayment: ', repayment);
                 eval.evaluator.reputationDuring += repayment;
               }
-             // Track progress
-              storedRequest.reputationProduced += eval.evaluator.reputationDuring - eval.evaluator.reputationBefore;
+              // Track progress
+              const repDiff = eval.evaluator.reputationDuring - eval.evaluator.reputationBefore;
+              storedRequest.reputationProduced += repDiff > 0 ? repDiff : 0;
             });
           }
           // ============ Step 3) Store updated evals ============ 
@@ -203,7 +217,7 @@ app.post('/newEvaluation', async function(req, res) {
           if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
             storedRequest = normalizeRep(storedRequest);
             finalizeWorkAsset(storedRequest);
-
+            console.log('requestId: ', requestId);
             db.del(requestId, function(err) {
               if (err) console.log('error in deleting the completed evaluation');
             });
@@ -214,7 +228,7 @@ app.post('/newEvaluation', async function(req, res) {
             res.send({'message': 'success', storedRequest});
           }
         } catch(e) {
-          res.status(500).send({ error: 'error in storing request with updated evaluator' });
+          res.status(500).send({ error: 'error in storing request with updated evaluator', msg: e });
         }
       } else {
         res.status(500).send({ error: 'error in obtaining request with specified id' });
