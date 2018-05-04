@@ -52,7 +52,7 @@ function normalizeRep(data) {
 
   // set these two fields equal for consistency
   data.reputationProduced = data.metadata.repToBeGained;
-  data.finalJudgment = weightedDecision / data.reputationProduced;
+  data.finalJudgment = Math.round(weightedDecision / data.reputationProduced);
   return data;
 }
 
