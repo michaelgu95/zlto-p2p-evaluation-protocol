@@ -51,8 +51,8 @@ function normalizeRep(data) {
   });
 
   // set these two fields equal for consistency
-  data.reputationProduced = data.metadata.repToBeGained;
-  data.finalJudgment = Math.round(weightedDecision / data.reputationProduced);
+  data.metadata.reputationProduced = data.metadata.repToBeGained;
+  data.metadata.finalJudgment = Math.round(weightedDecision / data.reputationProduced);
   return data;
 }
 
