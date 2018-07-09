@@ -5,7 +5,7 @@ contract Zlto {
         owner = msg.sender;
     }
     
-    event ProofCreated(
+    event DocumentAdded(
         uint256 indexed id,
         bytes32 documentHash
     );
@@ -29,9 +29,10 @@ contract Zlto {
     }
 
     function notarizeHash(uint256 id, bytes32 documentHash) onlyOwner public returns(bool){
+        require(msg.sender == owner);
         hashesById[id] = documentHash;
 
-        ProofCreated(id, documentHash);
+        DocumentAdded(id, documentHash);
         
         return true;
     }
