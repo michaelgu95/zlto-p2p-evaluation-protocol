@@ -19,16 +19,45 @@ const asyncMiddleware = fn =>
       .catch(next);
   };
 
-const IPFS = require('ipfs-mini');
-const ipfs = new IPFS({ host: 'localhost', port: 5001, protocol: 'http' });
 
-function finalizeWorkAsset(data) {
+// BigChainDB
+const BigchainDB = require('bigchaindb-driver')
+const bip39 = require('bip39')
+
+const API_PATH = 'https://test.bigchaindb.com/api/v1/'
+const conn = new BigchainDB.Connection(API_PATH, {
+    app_id: '67c1df20',
+    app_key: '4d9eb456e2289da3d2706eeca56d439f'
+})
+const gateway = new BigchainDB.Ed25519Keypair(bip39.mnemonicToSeed('seedPhrase').slice(0,32))
+
+
+async function finalizeWorkAsset(data) {
   console.log('processing evals with data: ', data)
   //TODO:   add finalized work asset into a store that expires every week. 
   // expose endpoint for Django to pull down from.
-  ipfs.addJSON(data, (err, result) => {
-    console.log(err, result);
-  });
+  const txCreateWorkAsset = BigchainDB.Transaction.makeCreateTransaction(
+    {
+      data, 
+    },
+    {
+      datetime: new Date().toString(),
+      synced_from: 'Zlto NodeEval Server',
+    },
+    [BigchainDB.Transaction.makeOutput(BigchainDB.Transaction.makeEd25519Condition(gateway.publicKey))],
+    gateway.publicKey
+  )
+
+  const txSigned = BigchainDB.Transaction.signTransaction(txCreateWorkAsset, gateway.publicKey)
+
+  try {
+    await conn.postTransactionCommit(txSigned)
+
+    const storedAssets = await conn.searchAssets('Toby')
+    console.log('storedAssets: ', JSON.stringify(storedAssets))
+  } catch(e) {
+    console.log(e)
+  }
 }
 
 function normalizeRep(data) {
