@@ -47,12 +47,15 @@ function normalizeRep(data) {
     }
 
     weightedDecision += (eval.evaluator.finalRepGained * eval.judgment)
+    console.log('weighted decision: ', weightedDecision)
     console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.finalRepGained}`);
   });
 
   // set these two fields equal for consistency
   data.metadata.reputationProduced = data.metadata.repToBeGained;
-  data.metadata.finalJudgment = Math.round(weightedDecision / data.reputationProduced);
+  data.metadata.unnormalizedReputationProduced = data.reputationProduced
+
+  data.metadata.finalJudgment = Math.round(weightedDecision / data.metadata.reputationProduced);
   return data;
 }
 
@@ -216,7 +219,7 @@ app.post('/newEvaluation', async function(req, res) {
           
           if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
             storedRequest = normalizeRep(storedRequest);
-            finalizeWorkAsset(storedRequest);
+            // finalizeWorkAsset(storedRequest);
             console.log('requestId: ', requestId);
             db.del(requestId, function(err) {
               if (err) console.log('error in deleting the completed evaluation');
@@ -228,7 +231,7 @@ app.post('/newEvaluation', async function(req, res) {
             res.send({'message': 'success', storedRequest});
           }
         } catch(e) {
-          res.status(500).send({ error: 'error in storing request with updated evaluator', msg: e });
+          res.status(500).send({ error: 'error in storing request with updated evaluator', msg: e.message });
         }
       } else {
         res.status(500).send({ error: 'error in obtaining request with specified id' });
