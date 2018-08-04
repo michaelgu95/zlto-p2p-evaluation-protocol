@@ -24,7 +24,7 @@ const asyncMiddleware = fn =>
 const BigchainDB = require('bigchaindb-driver')
 const bip39 = require('bip39')
 
-const API_PATH = 'https://test.bigchaindb.com/api/v1/'
+const API_PATH = 'http://localhost:9984/api/v1/'
 const conn = new BigchainDB.Connection(API_PATH, {
     app_id: '67c1df20',
     app_key: '4d9eb456e2289da3d2706eeca56d439f'
