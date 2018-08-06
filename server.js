@@ -96,7 +96,12 @@ function normalizeRep(data) {
                 eval.evaluator.finalReputation = reputationBefore + normalizedRepDiff;
             }
         } else {
-            eval.evaluator.finalReputation = reputationDuring;
+            // if user lost more rep than repToBeGained, set rep lost = repToBeGained
+            if (Math.abs(repDiff) > repToBeGained) {
+                eval.evaluator.finalReputation = reputationBefore - repToBeGained;
+            } else {
+                eval.evaluator.finalReputation = reputationDuring;
+            }
         }
     });
 
