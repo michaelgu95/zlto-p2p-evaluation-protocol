@@ -21,68 +21,90 @@ const asyncMiddleware = fn =>
 
 
 // BigChainDB
-const BigchainDB = require('bigchaindb-driver')
-const bip39 = require('bip39')
+// const BigchainDB = require('bigchaindb-driver')
+// const bip39 = require('bip39')
 
-const API_PATH = 'http://localhost:9984/api/v1/'
-const conn = new BigchainDB.Connection(API_PATH, {
-    app_id: '67c1df20',
-    app_key: '4d9eb456e2289da3d2706eeca56d439f'
-})
-const gateway = new BigchainDB.Ed25519Keypair(bip39.mnemonicToSeed('seedPhrase').slice(0,32))
-
+// const API_PATH = 'http://localhost:9984/api/v1/'
+// const conn = new BigchainDB.Connection(API_PATH, {
+//     app_id: '67c1df20',
+//     app_key: '4d9eb456e2289da3d2706eeca56d439f'
+// })
+// const gateway = new BigchainDB.Ed25519Keypair(bip39.mnemonicToSeed('seedPhrase').slice(0,32))
 
 async function finalizeWorkAsset(data) {
   console.log('processing evals with data: ', data)
-  //TODO:   add finalized work asset into a store that expires every week. 
-  // expose endpoint for Django to pull down from.
-  const txCreateWorkAsset = BigchainDB.Transaction.makeCreateTransaction(
-    {
-      data, 
-    },
-    {
-      datetime: new Date().toString(),
-      synced_from: 'Zlto NodeEval Server',
-    },
-    [BigchainDB.Transaction.makeOutput(BigchainDB.Transaction.makeEd25519Condition(gateway.publicKey))],
-    gateway.publicKey
-  )
+//   //TODO:   add finalized work asset into a store that expires every week. 
+//   // expose endpoint for Django to pull down from.
+//   const txCreateWorkAsset = BigchainDB.Transaction.makeCreateTransaction(
+//     {
+//       data, 
+//     },
+//     {
+//       datetime: new Date().toString(),
+//       synced_from: 'Zlto NodeEval Server',
+//     },
+//     [BigchainDB.Transaction.makeOutput(BigchainDB.Transaction.makeEd25519Condition(gateway.publicKey))],
+//     gateway.publicKey
+//   )
 
-  const txSigned = BigchainDB.Transaction.signTransaction(txCreateWorkAsset, gateway.publicKey)
+//   const txSigned = BigchainDB.Transaction.signTransaction(txCreateWorkAsset, gateway.publicKey)
 
-  try {
-    await conn.postTransactionCommit(txSigned)
+//   try {
+//     await conn.postTransactionCommit(txSigned)
 
-    const storedAssets = await conn.searchAssets('Toby')
-    console.log('storedAssets: ', JSON.stringify(storedAssets))
-  } catch(e) {
-    console.log(e)
-  }
+//     const storedAssets = await conn.searchAssets('Toby')
+//     console.log('storedAssets: ', JSON.stringify(storedAssets))
+//   } catch(e) {
+//     console.log(e)
+//   }
 }
 
 function normalizeRep(data) {
-  let weightedDecision = 0;
+    const { repToBeGained } = data.metadata;
+    let weightedDecision = 0;
 
-  _.forEach(data.evaluations, eval => {
-    const { reputationBefore, reputationDuring } = eval.evaluator;
-    const repDiff = reputationDuring - reputationBefore;
+    //
+    // Calculated final decision
+    //
+    _.forEach(data.evaluations, eval => {
+        const { reputationBefore, reputationDuring } = eval.evaluator;
+        const repDiff = reputationDuring - reputationBefore;
+        // if judgment is false, push it negative. vice versa.
+        const judgmentDirection = eval.judgment === false ? -1 : 1; 
 
-    if(repDiff < 0) {
-      // if lost rep, set it back to 0
-      eval.evaluator.finalRepGained = 0;
-    } else {
-      const normalizedRep = (repDiff / data.reputationProduced) * data.metadata.repToBeGained;
-      eval.evaluator.finalRepGained = normalizedRep;
-    }
+        weightedDecision += (repDiff * judgmentDirection)
+        console.log('weighted decision: ', weightedDecision)
+    });
 
-    weightedDecision += (eval.evaluator.finalRepGained * eval.judgment)
-    console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.finalRepGained}`);
-  });
+    const finalJudgment = weightedDecision < 0 ? 0 : 1
 
-  // set these two fields equal for consistency
-  data.metadata.reputationProduced = data.metadata.repToBeGained;
-  data.metadata.finalJudgment = Math.round(weightedDecision / data.reputationProduced);
-  return data;
+    data.metadata.finalJudgment = finalJudgment;
+
+    //
+    // Distribute reputation pool to winners
+    //
+    _.forEach(data.evaluations, eval => {
+        const { judgment } = eval;
+        const { reputationBefore, reputationDuring } = eval.evaluator;
+        let repDiff = reputationDuring - reputationBefore;
+
+        if (judgment == finalJudgment) {
+            if (repDiff < 0) {
+                eval.evaluator.finalReputation = reputationBefore;
+            } else {
+                const normalizedRepDiff = repDiff * (repToBeGained / data.reputationProduced);
+                eval.evaluator.finalReputation = reputationBefore + normalizedRepDiff;
+            }
+        } else {
+            eval.evaluator.finalReputation = reputationDuring;
+        }
+    });
+
+    // set these two fields equal for consistency
+    data.metadata.reputationProduced = repToBeGained;
+    data.metadata.unnormalizedReputationProduced = data.reputationProduced
+
+    return data;
 }
 
 // LevelDB to store intermediate states of evaluation cycles
