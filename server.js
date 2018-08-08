@@ -78,7 +78,6 @@ function normalizeRep(data) {
             eval.evaluator.finalReputation = reputationBefore + normalizedRepDiff;
         }
 
-        eval.evaluator.finalReputation = Math.round(eval.evaluator.finalReputation);
     });
 
     //
@@ -114,6 +113,8 @@ function normalizeRep(data) {
                 eval.evaluator.finalReputation = reputationDuring;
             }
         }
+
+        eval.evaluator.finalReputation = Math.round(eval.evaluator.finalReputation);
     })
 
     // set these two fields equal for consistency
