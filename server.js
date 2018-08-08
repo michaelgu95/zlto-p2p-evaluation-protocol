@@ -64,15 +64,33 @@ function normalizeRep(data) {
     let weightedDecision = 0;
 
     //
+    // Normalize reputation pool gained by winners
+    //
+    _.forEach(data.evaluations, eval => {
+        const { judgment } = eval;
+        const { reputationBefore, reputationDuring } = eval.evaluator;
+        let repDiff = reputationDuring - reputationBefore;
+
+        if (repDiff < 0) {
+            eval.evaluator.finalReputation = reputationBefore;
+        } else {
+            const normalizedRepDiff = repDiff * (repToBeGained / data.reputationProduced);
+            eval.evaluator.finalReputation = reputationBefore + normalizedRepDiff;
+        }
+
+        eval.evaluator.finalReputation = Math.round(eval.evaluator.finalReputation);
+    });
+
+    //
     // Calculated final decision
     //
     _.forEach(data.evaluations, eval => {
-        const { reputationBefore, reputationDuring } = eval.evaluator;
-        const repDiff = reputationDuring - reputationBefore;
+        const { reputationBefore, finalReputation } = eval.evaluator;
+        const finalRepDiff = finalReputation - reputationBefore;
         // if judgment is false, push it negative. vice versa.
         const judgmentDirection = eval.judgment === false ? -1 : 1; 
 
-        weightedDecision += (repDiff * judgmentDirection)
+        weightedDecision += (finalRepDiff * judgmentDirection)
         console.log('weighted decision: ', weightedDecision)
     });
 
@@ -81,21 +99,14 @@ function normalizeRep(data) {
     data.metadata.finalJudgment = finalJudgment;
 
     //
-    // Distribute reputation pool to winners
+    // Penalize those who disagreed with final judgment
     //
     _.forEach(data.evaluations, eval => {
         const { judgment } = eval;
         const { reputationBefore, reputationDuring } = eval.evaluator;
         let repDiff = reputationDuring - reputationBefore;
 
-        if (judgment == finalJudgment) {
-            if (repDiff < 0) {
-                eval.evaluator.finalReputation = reputationBefore;
-            } else {
-                const normalizedRepDiff = repDiff * (repToBeGained / data.reputationProduced);
-                eval.evaluator.finalReputation = reputationBefore + normalizedRepDiff;
-            }
-        } else {
+        if (judgment != finalJudgment) {
             // if user lost more rep than repToBeGained, set rep lost = repToBeGained
             if (Math.abs(repDiff) > repToBeGained) {
                 eval.evaluator.finalReputation = reputationBefore - repToBeGained;
@@ -103,7 +114,7 @@ function normalizeRep(data) {
                 eval.evaluator.finalReputation = reputationDuring;
             }
         }
-    });
+    })
 
     // set these two fields equal for consistency
     data.metadata.reputationProduced = repToBeGained;
