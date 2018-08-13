@@ -114,7 +114,10 @@ function normalizeRep(data) {
             }
         }
 
+        // NOTE: finalReputation is not necesarily synced with live system (user may participate in multiple evaluations);
+        // client side will use finalReputationDifference to avoid syncing issues
         eval.evaluator.finalReputation = Math.round(eval.evaluator.finalReputation);
+        eval.evaluator.finalReputationDifference = Math.round(eval.evaluator.finalReputation) - reputationBefore;
     })
 
     // set these two fields equal for consistency
