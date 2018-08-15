@@ -87,7 +87,10 @@ function normalizeRep(data) {
         const { reputationBefore, finalReputation } = eval.evaluator;
         const finalRepDiff = finalReputation - reputationBefore;
         // if judgment is false, push it negative. vice versa.
+        console.log('eval.judgment: ', eval.judgment);
         const judgmentDirection = eval.judgment === false ? -1 : 1; 
+        console.log('finalRepDiff: ', finalRepDiff);
+        console.log('judgmentDirection: ', judgmentDirection);
 
         weightedDecision += (finalRepDiff * judgmentDirection)
         console.log('weighted decision: ', weightedDecision)
