@@ -68,7 +68,9 @@ function normalizeRep(data) {
     //
     _.forEach(data.evaluations, eval => {
         const { judgment } = eval;
-        const { reputationBefore, reputationDuring } = eval.evaluator;
+        let { reputationBefore, reputationDuring } = eval.evaluator;
+        reputationBefore = Math.round(reputationBefore);
+
         let repDiff = reputationDuring - reputationBefore;
 
         if (repDiff < 0) {
@@ -80,7 +82,6 @@ function normalizeRep(data) {
             console.log('normalizedRepDiff: ', normalizedRepDiff);
             eval.evaluator.finalReputation = reputationBefore + normalizedRepDiff;
         }
-
     });
 
     //
