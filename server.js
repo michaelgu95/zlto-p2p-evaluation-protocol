@@ -84,7 +84,11 @@ function normalizeRep(data) {
     // Calculated final decision
     //
     _.forEach(data.evaluations, eval => {
+        console.log('eval: ', eval);
         const { reputationBefore, finalReputation } = eval.evaluator;
+        console.log('reputationBefore: ', reputationBefore);
+        console.log('finalReputation: ', finalReputation);
+
         const finalRepDiff = finalReputation - reputationBefore;
         // if judgment is false, push it negative. vice versa.
         console.log('eval.judgment: ', eval.judgment);
