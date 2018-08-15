@@ -74,7 +74,10 @@ function normalizeRep(data) {
         if (repDiff < 0) {
             eval.evaluator.finalReputation = reputationBefore;
         } else {
-            const normalizedRepDiff = repDiff * (repToBeGained / data.reputationProduced);
+            const normalizationFactor = repToBeGained / data.reputationProduced;
+            console.log('normalizationFactor: ', normalizationFactor);
+            const normalizedRepDiff = repDiff * normalizationFactor;
+            console.log('normalizedRepDiff: ', normalizedRepDiff);
             eval.evaluator.finalReputation = reputationBefore + normalizedRepDiff;
         }
 
