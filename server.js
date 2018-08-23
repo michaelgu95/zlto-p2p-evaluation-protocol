@@ -123,12 +123,15 @@ function normalizeRep(data) {
             } else {
                 eval.evaluator.finalReputation = reputationDuring;
             }
+            eval.evaluator.finalReputationDifference = Math.round(eval.evaluator.finalReputation) - reputationBefore;
+        } else {
+            let repDiff = Math.round(eval.evaluator.finalReputation) - reputationBefore;
+            eval.evaluator.finalReputationDifference = repDiff > 0 ? repDiff : 0;
         }
 
         // NOTE: finalReputation is not necesarily synced with live system (user may participate in multiple evaluations);
         // client side will use finalReputationDifference to avoid syncing issues
         eval.evaluator.finalReputation = Math.round(eval.evaluator.finalReputation);
-        eval.evaluator.finalReputationDifference = Math.round(eval.evaluator.finalReputation) - reputationBefore;
     })
 
     // set these two fields equal for consistency
