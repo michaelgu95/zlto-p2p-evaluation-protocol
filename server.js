@@ -96,7 +96,7 @@ function normalizeRep(data) {
         const finalRepDiff = finalReputation - reputationBefore;
         // if judgment is false, push it negative. vice versa.
         console.log('eval.judgment: ', eval.judgment);
-        const judgmentDirection = eval.judgment === false ? -1 : 1; 
+        const judgmentDirection = eval.judgment === 0 ? -1 : 1; 
         console.log('finalRepDiff: ', finalRepDiff);
         console.log('judgmentDirection: ', judgmentDirection);
 
