@@ -20,6 +20,7 @@ const asyncMiddleware = fn =>
 
 const IPFS = require('ipfs-mini');
 const ipfs = new IPFS({ host: 'localhost', port: 5001, protocol: 'http' });
+const {SHA256} = require("sha2");
 
 let contract;
 let createContract = require('./eth/createContract').createContract;
@@ -30,6 +31,7 @@ createContract().then(instance => {
 // console.log('contract: ', createContract());
 
 function finalizeWorkAsset(data) {
+
   console.log('processing evals with data: ', data)
   //TODO:   add finalized work asset into a store that expires every week. 
   // expose endpoint for Django to pull down from.
@@ -38,10 +40,14 @@ function finalizeWorkAsset(data) {
   });
 
   ipfs.addJSON(data, (err, ipfsHash) => {
-    console.log(err, ipfsHash);
-    contract.contract.notarizeHash(100, ipfsHash, (err, result => {
-      if (err) console.log('contract call error: ', err);
-    }));
+        console.log(err, ipfsHash);
+
+      const hashedData = "0x" + SHA256(JSON.stringify(data)).toString("hex")
+      console.log('hashedData: ', hashedData);
+
+      contract.contract.notarizeHash(data.id, hashedData, (err, result => {
+            if (err) console.log('contract call error: ', err);
+        }));
   });
 }
 
