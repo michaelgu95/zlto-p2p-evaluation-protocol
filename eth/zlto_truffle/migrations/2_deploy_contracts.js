@@ -2,8 +2,8 @@
 // var MetaCoin = artifacts.require("./MetaCoin.sol");
 var Zlto = artifacts.require("./Zlto.sol");
 
-module.exports = function(deployer) {
-  deployer.deploy(Zlto);
-  // deployer.link(ConvertLib, MetaCoin);
-  // deployer.deploy(MetaCoin);
+module.exports = function(deployer, network, accounts) {
+    let deployAddress = accounts[0];
+    console.log('deploying from:' + deployAddress);
+    deployer.deploy(Zlto, {from: deployAddress});
 };

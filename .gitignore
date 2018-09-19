@@ -4,3 +4,5 @@ package-lock.json
 orbitdb/*
 mydb/*
 experiment/*
+secrets.js
+
