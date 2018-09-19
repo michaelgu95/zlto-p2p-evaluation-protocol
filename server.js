@@ -31,28 +31,6 @@ let contract;
 const { contractAtAddress, web3 } = require('./eth/createContract');
 const contractAddress = '0xbf993954834a81f40fb30f290bb9170208f6a0c1';
 
-contractAtAddress(contractAddress).then(instance => {
-    contract = instance;
-    console.log('contract: ', contract);
-    return web3.eth.getAccounts()
-}).then(accounts => {
-    console.log('accounts: @@@@@@@@@@@@@@@@2', accounts);
-    return contract.methods.notarizeHash(80, "0x4a304e45e6c73fa8550c289e107f38201688461f8e5d7183db301309411c4633").send({from: accounts[0], gas: 50000})
-
-    // this works
-    // return contract.methods.hashesById(80).call()
-
-}).then(result => {
-    console.log('result: ', result)
-});
-
-
-// contract.hashesBydId(80, (err,res) => {
-//     if (err) console.log('contract call error: ', err);
-
-//     console.log('result: ', res)
-
-// })
 
 function finalizeWorkAsset(data) {
   console.log('processing evals with data: ', data)
@@ -68,11 +46,20 @@ function finalizeWorkAsset(data) {
       const hashedData = "0x" + SHA256(JSON.stringify(data)).toString("hex")
       console.log('hashedData: ', hashedData);
 
-      contract.notarizeHash(data.id, hashedData, (err, result) => {
-            if (err) console.log('contract call error: ', err);
-          console.log('result: ', result)
-        })
-  // });
+    contractAtAddress(contractAddress).then(instance => {
+        contract = instance;
+        console.log('contract: ', contract);
+        return web3.eth.getAccounts()
+    }).then(accounts => {
+        console.log('accounts: @@@@@@@@@@@@@@@@2', accounts);
+        return contract.methods.notarizeHash(data.id, hashedData).send({from: accounts[0], gas: 50000})
+
+        // this works
+        // return contract.methods.hashesById(80).call()
+
+    }).then(result => {
+        console.log('result: ', result)
+    });
 }
 
 function normalizeRep(data) {
