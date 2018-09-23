@@ -17,15 +17,15 @@ module.exports = {
       port: 8545,
       network_id: '*' // Match any network id
     },
-    ropsten: { 
+    ropsten: {
 	provider: ropstenProvider,
-	network_id: "3", 
-	gas: 4465030 
+	network_id: "3",
+	gas: 4465030
     },
-    live: { 
+    live: {
 	provider: mainNetProvider,
-	network_id: "1", 
-	gas: 7500000 
+	network_id: "1",
+	gas: 7500000
     }
   }
 }

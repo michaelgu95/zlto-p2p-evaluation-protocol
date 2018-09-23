@@ -30,14 +30,7 @@ function createContract() {
 async function contractAtAddress(addr) {
     const abi = ZltoJSON.abi;
     web3.setProvider(ropstenProvider)
-
-    console.log('accounts: ', web3.eth.accounts)
-    console.log('web3.eth.defaultAccount', web3.eth.defaultAccount);
-
     let contract = new web3.eth.Contract(abi, addr);
-
-    // console.log('contract: ', contract);
-
     return contract;
 }
 

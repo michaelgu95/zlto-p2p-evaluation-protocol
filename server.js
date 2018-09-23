@@ -18,48 +18,36 @@ const asyncMiddleware = fn =>
       .catch(next);
   };
 
-const IPFS = require('ipfs-mini');
-const ipfs = new IPFS({ host: 'localhost', port: 5001, protocol: 'http' });
-const {SHA256} = require("sha2");
-
-let contract;
-// let createContract = require('./eth/createContract').createContract;
-// createContract().then(instance => {
-//   console.log('instance: ', instance);
-//   contract = instance;
-// });
 const { contractAtAddress, web3 } = require('./eth/createContract');
+const {SHA256} = require("sha2");
 const contractAddress = '0xbf993954834a81f40fb30f290bb9170208f6a0c1';
+let contract;
 
-
-function finalizeWorkAsset(data) {
-  console.log('processing evals with data: ', data)
-  //TODO:   add finalized work asset into a store that expires every week. 
-  // expose endpoint for Django to pull down from.
-  _.forEach(data.evaluations, eval => {
-    console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
-  });
-
-  // ipfs.addJSON(data, (err, ipfsHash) => {
-  //       console.log(err, ipfsHash);
-
-      const hashedData = "0x" + SHA256(JSON.stringify(data)).toString("hex")
-      console.log('hashedData: ', hashedData);
-
-    contractAtAddress(contractAddress).then(instance => {
-        contract = instance;
-        console.log('contract: ', contract);
-        return web3.eth.getAccounts()
-    }).then(accounts => {
-        console.log('accounts: @@@@@@@@@@@@@@@@2', accounts);
-        return contract.methods.notarizeHash(data.id, hashedData).send({from: accounts[0], gas: 50000})
-
-        // this works
-        // return contract.methods.hashesById(80).call()
-
-    }).then(result => {
-        console.log('result: ', result)
+async function pushToChain(data) {
+    console.log('processing evals with data: ', data)
+    //TODO:   add finalized work asset into a store that expires every week. 
+    // expose endpoint for Django to pull down from.
+    _.forEach(data.evaluations, eval => {
+        console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
     });
+
+    const hashedData = "0x" + SHA256(JSON.stringify(data)).toString("hex")
+    console.log('hashedData: ', hashedData);
+
+    const contract = await contractAtAddress(contractAddress);
+    console.log('contract: ', contract);
+    const accounts = await web3.eth.getAccounts();
+    console.log('accounts: @@@@@@@@@@@@@@@@@', accounts);
+    const result = await contract.methods.notarizeHash(data.id, hashedData).send({from: accounts[0], gas: 50000});
+    console.log('result: ', result)
+
+    // verify data stored on contract equals hashedData
+    const verifyHash = await contract.methods.hashesById(data.id).call();
+    console.log('verifyHash: ', verifyHash);
+
+    if(verifyHash === hashedData) {
+        return result;
+    }
 }
 
 function normalizeRep(data) {
@@ -74,7 +62,7 @@ function normalizeRep(data) {
       eval.evaluator.finalRepGained = normalizedRep;
     }
     console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.finalRepGained}`);
-  });
+  });data
   // set these two fields equal for consistency
   data.reputationProduced = data.metadata.repToBeGained;
   return data;
@@ -129,6 +117,13 @@ app.delete('/cancelRequest', async function(req, res) {
   } else {
     res.status(500).send({ error: 'no db instance' });
   }
+});
+
+app.post('/pushToChain', async function(req, res) {
+    console.log('req.body: ', req.body);
+    const ethResult = await pushToChain(req.body);
+    console.log('ethResult: ', ethResult);
+    res.json({'message': 'pushed data to ethereum contract successfully', 'txn': ethResult});
 });
 
 app.post('/newRequest', async function(req, res) {
@@ -235,7 +230,7 @@ app.post('/newEvaluation', async function(req, res) {
           
           if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
             storedRequest = normalizeRep(storedRequest);
-            finalizeWorkAsset(storedRequest);
+            pushToChain(storedRequest);
 
             db.del(requestId, function(err) {
               if (err) console.log('error in deleting the completed evaluation');
