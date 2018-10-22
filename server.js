@@ -56,7 +56,7 @@ async function pushToChain(data) {
             // gas: 5000000,
             to: contractAddress,
             data: contract.methods.notarizeHashes(idArray, hashArray).encodeABI(),
-            nonce: web3.utils.toHex(3)
+            nonce: web3.utils.toHex(5)
         };
         const tx = new EthereumTx(txParams);
         console.log('tx: ', tx);
@@ -157,6 +157,8 @@ app.post('/pushToChain', async function(req, res) {
 
 app.get('/verifyChain', async function(req, res) {
     const id = req.param('id');
+    if(!id) res.status(500).send({ error: 'id parameter required' });
+
     const result = await verifyHashById(id);
 
     if(result) {

@@ -6,4 +6,5 @@ mydb/*
 experiment/*
 secrets.js
 node_modules/
-
+.env
+*.swp
