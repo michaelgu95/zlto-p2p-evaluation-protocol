@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
 
 contract Zlto {
-    function Zlto() public {
+    constructor() public {
         owner = msg.sender;
     }
     
@@ -31,9 +31,20 @@ contract Zlto {
     function notarizeHash(uint256 id, bytes32 documentHash) onlyOwner public returns(bool){
         require(msg.sender == owner);
         hashesById[id] = documentHash;
+        emit DocumentAdded(id, documentHash);
 
-        DocumentAdded(id, documentHash);
-        
+        return true;
+    }
+
+    function notarizeHashes(uint256[] idArray, bytes32[] hashArray) onlyOwner public returns(bool) {
+        require(msg.sender == owner);
+        require(idArray.length == hashArray.length);
+
+        for (uint i=0; i<idArray.length; i++) {
+            hashesById[idArray[i]] = hashArray[i];
+
+            emit DocumentAdded(idArray[i], hashArray[i]);
+        }
         return true;
     }
 

@@ -1,4 +1,5 @@
 /* eslint no-console: 0 */
+require('dotenv').config();
 const _ = require('lodash');
 const path = require('path');
 const express = require('express'); const webpack = require('webpack');
@@ -9,6 +10,8 @@ const isDeveloping = process.env.NODE_ENV !== 'production';
 const port = isDeveloping ? 3000 : process.env.PORT;
 const app = express();
 const bodyParser = require('body-parser');
+const EthereumTx = require('ethereumjs-tx')
+
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(bodyParser.json());
 
@@ -18,35 +21,64 @@ const asyncMiddleware = fn =>
       .catch(next);
   };
 
-const { contractAtAddress, web3 } = require('./eth/createContract');
+const { contractAtAddress, web3 } = require('./eth/util');
 const {SHA256} = require("sha2");
-const contractAddress = '0xbf993954834a81f40fb30f290bb9170208f6a0c1';
+// Ropsten address
+// const contractAddress = '0x517447acd5621573c07d120a1ec9dab8b4679280';
+
+// Mainnet address
+const contractAddress = '0xc872877fb55c0303cdbb48ad96b404b1fd1d3c51';
 let contract;
 
 async function pushToChain(data) {
     console.log('processing evals with data: ', data)
     //TODO:   add finalized work asset into a store that expires every week. 
     // expose endpoint for Django to pull down from.
-    _.forEach(data.evaluations, eval => {
-        console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
-    });
+    // _.forEach(data.evaluations, eval => {
+    //     console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
+    // });
 
-    const hashedData = "0x" + SHA256(JSON.stringify(data)).toString("hex")
-    console.log('hashedData: ', hashedData);
+    const idArray = data.map(d=> d.id);
+    const hashArray = data.map(d=> "0x" + SHA256(JSON.stringify(d)).toString("hex"));
+    console.log('idArray: ', idArray);
+    console.log('hashArray: ', hashArray);
 
-    const contract = await contractAtAddress(contractAddress);
-    console.log('contract: ', contract);
-    const accounts = await web3.eth.getAccounts();
-    console.log('accounts: @@@@@@@@@@@@@@@@@', accounts);
-    const result = await contract.methods.notarizeHash(data.id, hashedData).send({from: accounts[0], gas: 50000});
-    console.log('result: ', result)
+    try {
+        const contract = await contractAtAddress(contractAddress);
+        console.log('contract: ', contract);
+        let count = await web3.eth.getTransactionCount(contractAddress);
+        console.log('count: ', count);
+        const privateKey = Buffer.from(process.env.METAMASK_KEY, 'hex');
+        const txParams = {
+            from: '0xe16C85791Eb53E3f96803dfdcA486CbFC2B47D32',
+            gasPrice: web3.utils.toHex(20* 1e9),
+            gasLimit:web3.utils.toHex(410000),
+            // gas: 5000000,
+            to: contractAddress,
+            data: contract.methods.notarizeHashes(idArray, hashArray).encodeABI(),
+            nonce: web3.utils.toHex(3)
+        };
+        const tx = new EthereumTx(txParams);
+        console.log('tx: ', tx);
+        tx.sign(privateKey);
+        const result = await web3.eth.sendSignedTransaction('0x'+tx.serialize().toString('hex'));
+        console.log('result: ', result)
 
-    // verify data stored on contract equals hashedData
-    const verifyHash = await contract.methods.hashesById(data.id).call();
-    console.log('verifyHash: ', verifyHash);
-
-    if(verifyHash === hashedData) {
         return result;
+    } catch(e) {
+        console.log('error with contract: ', e.message);
+    }
+}
+
+async function verifyHashById(id) {
+    try {
+        const contract = await contractAtAddress(contractAddress);
+        console.log('contract: ', contract);
+        const result = await contract.methods.hashesById(id).call();
+
+        return result;
+    } catch(e) {
+        console.log('error with contract: ', e.message);
     }
 }
 
@@ -89,15 +121,8 @@ if (isDeveloping) {
 
   app.use(middleware);
   app.use(webpackHotMiddleware(compiler));
-  // app.get('*', function response(req, res) {
-  //   res.write(middleware.fileSystem.readFileSync(path.join(__dirname, 'dist/index.html')));
-  //   res.end();
-  // });
 } else {
   app.use(express.static(__dirname + '/dist'));
-  // app.get('*', function response(req, res) {
-  //   res.sendFile(path.join(__dirname, 'dist/index.html'));
-  // });
 }
 
 // const experiment = require('./experiment/setup');
@@ -123,7 +148,22 @@ app.post('/pushToChain', async function(req, res) {
     console.log('req.body: ', req.body);
     const ethResult = await pushToChain(req.body);
     console.log('ethResult: ', ethResult);
-    res.json({'message': 'pushed data to ethereum contract successfully', 'txn': ethResult});
+    if(ethResult) {
+        res.json({'message': 'pushed data to ethereum contract successfully', 'txn': ethResult});
+    } else {
+        res.json({'message': 'error in eth contract result'});
+    }
+});
+
+app.get('/verifyChain', async function(req, res) {
+    const id = req.param('id');
+    const result = await verifyHashById(id);
+
+    if(result) {
+        res.json({'message': 'hash for id retrieved successfully', 'hash': result});
+    } else {
+        res.json({'message': 'error in eth contract result'});
+    }
 });
 
 app.post('/newRequest', async function(req, res) {
