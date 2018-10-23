@@ -1,8 +1,8 @@
 /* eslint no-console: 0 */
+require('dotenv').config();
 const _ = require('lodash');
 const path = require('path');
-const express = require('express');
-const webpack = require('webpack');
+const express = require('express'); const webpack = require('webpack');
 const webpackMiddleware = require('webpack-dev-middleware');
 const webpackHotMiddleware = require('webpack-hot-middleware');
 const config = require('./webpack.config.js');
@@ -10,6 +10,8 @@ const isDeveloping = process.env.NODE_ENV !== 'production';
 const port = isDeveloping ? 3000 : process.env.PORT;
 const app = express();
 const bodyParser = require('body-parser');
+const EthereumTx = require('ethereumjs-tx')
+
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(bodyParser.json());
 
@@ -19,44 +21,59 @@ const asyncMiddleware = fn =>
       .catch(next);
   };
 
+const { contractAtAddress, web3 } = require('./eth/util');
+// Ropsten address
+// const contractAddress = '0x517447acd5621573c07d120a1ec9dab8b4679280';
 
-// BigChainDB
-// const BigchainDB = require('bigchaindb-driver')
-// const bip39 = require('bip39')
+// Mainnet address
+const contractAddress = '0x7d5B6DcCf993B11c0A94Dc915796032E69516587';
+let contract;
+let nonce = 21;
 
-// const API_PATH = 'http://localhost:9984/api/v1/'
-// const conn = new BigchainDB.Connection(API_PATH, {
-//     app_id: '67c1df20',
-//     app_key: '4d9eb456e2289da3d2706eeca56d439f'
-// })
-// const gateway = new BigchainDB.Ed25519Keypair(bip39.mnemonicToSeed('seedPhrase').slice(0,32))
+async function pushToChain(data) {
+    const idArray = data.map(d => "0x" + d.id.replace(/-/g, ""));
+    const hashArray = data.map(d=> "0x" + d.hash);
+    console.log('idArray: ', idArray);
+    console.log('hashArray: ', hashArray);
 
-async function finalizeWorkAsset(data) {
-  console.log('processing evals with data: ', data)
-//   //TODO:   add finalized work asset into a store that expires every week. 
-//   // expose endpoint for Django to pull down from.
-//   const txCreateWorkAsset = BigchainDB.Transaction.makeCreateTransaction(
-//     {
-//       data, 
-//     },
-//     {
-//       datetime: new Date().toString(),
-//       synced_from: 'Zlto NodeEval Server',
-//     },
-//     [BigchainDB.Transaction.makeOutput(BigchainDB.Transaction.makeEd25519Condition(gateway.publicKey))],
-//     gateway.publicKey
-//   )
+    try {
+        const contract = await contractAtAddress(contractAddress);
+        console.log('contract: ', contract);
+        let count = await web3.eth.getTransactionCount(contractAddress);
+        console.log('count: ', count);
+        const privateKey = Buffer.from(process.env.METAMASK_KEY, 'hex');
+        const txParams = {
+            from: '0xe16C85791Eb53E3f96803dfdcA486CbFC2B47D32',
+            gasPrice: web3.utils.toHex(20* 1e9),
+            gasLimit:web3.utils.toHex(500000),
+            // gas: 5000000,
+            to: contractAddress,
+            data: contract.methods.notarizeHashes(idArray, hashArray).encodeABI(),
+            nonce: web3.utils.toHex(nonce++)
+        };
+        const tx = new EthereumTx(txParams);
+        console.log('tx: ', tx);
+        tx.sign(privateKey);
+        const result = await web3.eth.sendSignedTransaction('0x'+tx.serialize().toString('hex'));
+        console.log('result: ', result)
 
-//   const txSigned = BigchainDB.Transaction.signTransaction(txCreateWorkAsset, gateway.publicKey)
+        return result;
+    } catch(e) {
+        console.log('error with contract: ', e.message);
+    }
+}
 
-//   try {
-//     await conn.postTransactionCommit(txSigned)
+async function verifyHashById(id) {
+    try {
+        const contract = await contractAtAddress(contractAddress);
+        console.log('contract: ', contract);
+        const formattedId = "0x" + id.replace(/-/g, "");
+        const result = await contract.methods.hashesById(formattedId).call();
 
-//     const storedAssets = await conn.searchAssets('Toby')
-//     console.log('storedAssets: ', JSON.stringify(storedAssets))
-//   } catch(e) {
-//     console.log(e)
-//   }
+        return result;
+    } catch(e) {
+        console.log('error with contract: ', e.message);
+    }
 }
 
 function normalizeRep(data) {
@@ -162,15 +179,8 @@ if (isDeveloping) {
 
   app.use(middleware);
   app.use(webpackHotMiddleware(compiler));
-  // app.get('*', function response(req, res) {
-  //   res.write(middleware.fileSystem.readFileSync(path.join(__dirname, 'dist/index.html')));
-  //   res.end();
-  // });
 } else {
   app.use(express.static(__dirname + '/dist'));
-  // app.get('*', function response(req, res) {
-  //   res.sendFile(path.join(__dirname, 'dist/index.html'));
-  // });
 }
 
 // const experiment = require('./experiment/setup');
@@ -190,6 +200,30 @@ app.delete('/cancelRequest', async function(req, res) {
   } else {
     res.status(500).send({ error: 'no db instance' });
   }
+});
+
+app.post('/pushToChain', async function(req, res) {
+    console.log('req.body: ', req.body);
+    const ethResult = await pushToChain(req.body);
+    console.log('ethResult: ', ethResult);
+    if(ethResult) {
+        res.json({'message': 'pushed data to ethereum contract successfully', 'blockchainHash': ethResult.transactionHash});
+    } else {
+        res.status(500).send({ error: 'error in eth contract result' });
+    }
+});
+
+app.get('/verifyChain', async function(req, res) {
+    const id = req.param('id');
+    if(!id) res.status(500).send({ error: 'id parameter required' });
+
+    const result = await verifyHashById(id);
+
+    if(result) {
+        res.json({'message': 'hash for id retrieved successfully', 'hash': result});
+    } else {
+        res.json({'message': 'error in eth contract result'});
+    }
 });
 
 app.post('/newRequest', async function(req, res) {
@@ -225,6 +259,7 @@ app.get('/checkRequest', async function(req, res) {
 
 app.post('/newEvaluation', async function(req, res) {
   const requestId = req.body.id;
+
   if(db) {
     try {
       let query = await db.get(requestId, { asBuffer: false });
@@ -267,7 +302,7 @@ app.post('/newEvaluation', async function(req, res) {
 
           // ============ Step 2) Rep flow: recalculate rep for committed evaluators ============
           const STAKE_DIST_FRACTION = 0.6; // positive slope of rep flow curve
-          
+
           if (storedEvals.length > 0) {
               // Wk
               const reputationInAgreement = storedEvals
@@ -298,15 +333,14 @@ app.post('/newEvaluation', async function(req, res) {
           // Enough evaluations have come through OR enough reputation has come through:
           // if(storedRequest.evaluations.length == NUM_EVALUATORS_REQUIRED) {
           console.log('reputationProduced: ', storedRequest.reputationProduced);
-          
+
           if(storedRequest.reputationProduced >= storedRequest.metadata.repToBeGained) {
             storedRequest = normalizeRep(storedRequest);
-            // finalizeWorkAsset(storedRequest);
-            console.log('requestId: ', requestId);
+
             db.del(requestId, function(err) {
               if (err) console.log('error in deleting the completed evaluation');
             });
-            
+
             res.json({'message': 'success', 'details': 'evaluation cycle completed, workAsset finalized', 'workAsset': storedRequest});
           } else {
             // TODO: Django server will deduct the stake from the evaluator's live reputation
