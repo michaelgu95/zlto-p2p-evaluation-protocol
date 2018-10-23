@@ -27,19 +27,13 @@ const {SHA256} = require("sha2");
 // const contractAddress = '0x517447acd5621573c07d120a1ec9dab8b4679280';
 
 // Mainnet address
-const contractAddress = '0xc872877fb55c0303cdbb48ad96b404b1fd1d3c51';
+const contractAddress = '0x7d5B6DcCf993B11c0A94Dc915796032E69516587';
 let contract;
+let nonce = 20;
 
 async function pushToChain(data) {
-    console.log('processing evals with data: ', data)
-    //TODO:   add finalized work asset into a store that expires every week. 
-    // expose endpoint for Django to pull down from.
-    // _.forEach(data.evaluations, eval => {
-    //     console.log(`Final reputation for ${eval.evaluator.name}: ${eval.evaluator.reputationDuring}`);
-    // });
-
-    const idArray = data.map(d=> d.id);
-    const hashArray = data.map(d=> "0x" + SHA256(JSON.stringify(d)).toString("hex"));
+    const idArray = data.map(d => "0x" + d.id.replace(/-/g, ""));
+    const hashArray = data.map(d=> "0x" + d.hash);
     console.log('idArray: ', idArray);
     console.log('hashArray: ', hashArray);
 
@@ -52,11 +46,11 @@ async function pushToChain(data) {
         const txParams = {
             from: '0xe16C85791Eb53E3f96803dfdcA486CbFC2B47D32',
             gasPrice: web3.utils.toHex(20* 1e9),
-            gasLimit:web3.utils.toHex(410000),
+            gasLimit:web3.utils.toHex(500000),
             // gas: 5000000,
             to: contractAddress,
             data: contract.methods.notarizeHashes(idArray, hashArray).encodeABI(),
-            nonce: web3.utils.toHex(5)
+            nonce: web3.utils.toHex(nonce++)
         };
         const tx = new EthereumTx(txParams);
         console.log('tx: ', tx);
@@ -74,7 +68,8 @@ async function verifyHashById(id) {
     try {
         const contract = await contractAtAddress(contractAddress);
         console.log('contract: ', contract);
-        const result = await contract.methods.hashesById(id).call();
+        const formattedId = "0x" + id.replace(/-/g, "");
+        const result = await contract.methods.hashesById(formattedId).call();
 
         return result;
     } catch(e) {
@@ -149,9 +144,9 @@ app.post('/pushToChain', async function(req, res) {
     const ethResult = await pushToChain(req.body);
     console.log('ethResult: ', ethResult);
     if(ethResult) {
-        res.json({'message': 'pushed data to ethereum contract successfully', 'txn': ethResult});
+        res.json({'message': 'pushed data to ethereum contract successfully', 'blockchainHash': ethResult.transactionHash});
     } else {
-        res.json({'message': 'error in eth contract result'});
+        res.status(500).send({ error: 'error in eth contract result' });
     }
 });
 
