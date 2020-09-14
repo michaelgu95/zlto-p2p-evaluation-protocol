@@ -28,7 +28,7 @@ const { contractAtAddress, web3 } = require('./eth/util');
 // Mainnet address
 const contractAddress = '0x7d5B6DcCf993B11c0A94Dc915796032E69516587';
 let contract;
-let nonce = 21;
+let nonce = 50;
 
 async function pushToChain(data) {
     const idArray = data.map(d => "0x" + d.id.replace(/-/g, ""));
@@ -44,9 +44,9 @@ async function pushToChain(data) {
         const privateKey = Buffer.from(process.env.METAMASK_KEY, 'hex');
         const txParams = {
             from: '0xe16C85791Eb53E3f96803dfdcA486CbFC2B47D32',
-            gasPrice: web3.utils.toHex(20* 1e9),
+            gasPrice: web3.utils.toHex(100* 1e9),
             gasLimit:web3.utils.toHex(500000),
-            // gas: 5000000,
+            gas: 210000,
             to: contractAddress,
             data: contract.methods.notarizeHashes(idArray, hashArray).encodeABI(),
             nonce: web3.utils.toHex(nonce++)
@@ -54,7 +54,9 @@ async function pushToChain(data) {
         const tx = new EthereumTx(txParams);
         console.log('tx: ', tx);
         tx.sign(privateKey);
-        const result = await web3.eth.sendSignedTransaction('0x'+tx.serialize().toString('hex'));
+        const serializedTx = tx.serialize();
+
+        const result = await web3.eth.sendSignedTransaction('0x'+serializedTx.toString('hex'));
         console.log('result: ', result)
 
         return result;
@@ -190,7 +192,7 @@ if (isDeveloping) {
 
 app.delete('/cancelRequest', async function(req, res) {
   if(db) {
-    let id = req.param('id');
+    let id = req.params.id;
     db.del(id, function (err) {
       if(err) {
         res.status(500).send({ error: 'error in deleting the request' });
@@ -214,7 +216,7 @@ app.post('/pushToChain', async function(req, res) {
 });
 
 app.get('/verifyChain', async function(req, res) {
-    const id = req.param('id');
+    const id = req.params.id;
     if(!id) res.status(500).send({ error: 'id parameter required' });
 
     const result = await verifyHashById(id);
@@ -244,7 +246,7 @@ app.post('/newRequest', async function(req, res) {
 app.get('/checkRequest', async function(req, res) {
   if(db) {
     try {
-      let storedRequest = await db.get(req.param('id'), { asBuffer: false });
+      let storedRequest = await db.get(req.params.id, { asBuffer: false });
       if(storedRequest) {
         res.setHeader('Content-Type', 'application/json');
         res.send({'message': 'success', 'storedRequest': JSON.parse(storedRequest)});
