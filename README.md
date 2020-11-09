@@ -1,7 +1,7 @@
-# p2pEvalNode
+# Zlto p2p Evaluation Protocol
 A node server for p2p evaluation of work. Primarily for performance comparisons against decentralized smart contract.
 
-**NOTE!** Use the latest version of Node, 9.x.x.
+**NOTE!** Use the Node 9.x.x.
 ## Install and Running
 0. clone this repo
 1. npm install
