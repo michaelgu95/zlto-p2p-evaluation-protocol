@@ -3,8 +3,7 @@ A node server for p2p evaluation of work. Primarily for performance comparisons 
 
 **NOTE!** Use the latest version of Node, 9.x.x.
 ## Install and Running
-`git clone https://github.com/christianalfoni/webpack-express-boilerplate.git`
-
+0. clone this repo
 1. npm install
 2. npm start
 3. navigate to http://localhost:3000 in your browser of choice.
