@@ -1,5 +1,5 @@
 # Zlto p2p Evaluation Protocol
-A node.js implementation of the Zlto P2P Evaluation System, as outlined in the paper Zlto: Increase and Track Positive Behavior using Secure Blockchain Technology 
+A node.js implementation of the Zlto P2P Evaluation System, as outlined in the paper **Zlto: Increase and Track Positive Behavior using Secure Blockchain Technology**
 
 https://infonomics-society.org/wp-content/uploads/Zlto-Increase-and-Track-Positive-Behavior.pdf
 
