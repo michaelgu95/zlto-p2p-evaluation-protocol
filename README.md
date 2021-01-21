@@ -3,7 +3,7 @@ A node.js implementation of the Zlto P2P Evaluation System, as outlined in the p
 
 https://infonomics-society.org/wp-content/uploads/Zlto-Increase-and-Track-Positive-Behavior.pdf
 
-**NOTE!** Use the Node 9.x.x.
+**NOTE!** Make sure your system is running Node 9.x.x or greater.
 ## Install and Running
 0. clone this repo
 1. npm install
